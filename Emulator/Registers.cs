@@ -7,7 +7,7 @@ internal sealed class Registers
     {
         if (!BitConverter.IsLittleEndian)
         {
-            throw new NotSupportedException("Big-endian architectures are not supported on this emulator core.");
+            throw new NotSupportedException("This emulator core does not support big-endian architectures.");
         }
     }
 
@@ -109,7 +109,7 @@ internal sealed class Registers
     private readonly byte[] _registerData = new byte[67];
 
     // Dict should _always_ map every enumeration in RegisterTargets.
-    private static Dictionary<Constants.RegisterTargets, int> _registerTargetToArrayPosition = new()
+    private static readonly Dictionary<Constants.RegisterTargets, int> _registerTargetToArrayPosition = new()
     {
         { Constants.RegisterTargets.F, 0 },
         { Constants.RegisterTargets.A, 2 },
