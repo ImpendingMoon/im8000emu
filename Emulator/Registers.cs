@@ -90,14 +90,7 @@ internal sealed class Registers
     public void RestoreIFF1()
     {
         byte iff2 = GetRegisterByte(Constants.RegisterTargets.IFF2, false);
-        if (iff2 == 0)
-        {
-            SetFlag(Constants.FlagMasks.EnableInterrupts, false);
-        }
-        else
-        {
-            SetFlag(Constants.FlagMasks.EnableInterrupts, true);
-        }
+        SetFlag(Constants.FlagMasks.EnableInterrupts, iff2 != 0);
     }
 
     public void ClearRegisters()

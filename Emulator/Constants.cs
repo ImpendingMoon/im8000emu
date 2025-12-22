@@ -14,7 +14,6 @@ internal class Constants
 
     public enum FlagMasks : ushort
     {
-        EnableSingleStep = 0b0000_0010_0000_0000,
         EnableInterrupts = 0b0000_0001_0000_0000,
         Sign = 0b1000_0000,
         Zero = 0b0100_0000,
