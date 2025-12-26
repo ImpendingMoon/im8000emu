@@ -4,14 +4,16 @@ namespace im8000emu.Emulator;
 
 internal class CPU
 {
-    public CPU()
+    public CPU(MemoryBus memoryBus, MemoryBus ioBus)
     {
+        _memoryBus = memoryBus;
+        _ioBus = ioBus;
     }
 
     public Registers Registers { get; } = new Registers();
 
     /// <summary>
-    /// Decodes the next operation, including interrupt servicing.
+    /// Fetches and decodes the next operation, including interrupt servicing.
     /// </summary>
     public DecodedOperation Decode()
     {
@@ -25,7 +27,7 @@ internal class CPU
     }
 
     /// <summary>
-    /// Decodes the operation at the given address, does not include interrupt servicing.
+    /// Fetches and decodes the operation at the given address. Does not include interrupt servicing.
     /// </summary>
     /// <param name="address">Base address of the opcode</param>
     public DecodedOperation Decode(uint address)
@@ -34,7 +36,7 @@ internal class CPU
         var decodedOperation = new DecodedOperation
         {
             BaseAddress = address,
-            Opcode = [0b00001111] // NOP. Replace with actual opcode fetch.
+            Opcode = [_memoryBus.ReadByte(address)]
         };
 
         var group = decodedOperation.Opcode[0] & 0b00000011;
@@ -131,4 +133,7 @@ internal class CPU
         // Return number of cycles taken
         return 4;
     }
+
+    private readonly MemoryBus _memoryBus;
+    private readonly MemoryBus _ioBus;
 }
