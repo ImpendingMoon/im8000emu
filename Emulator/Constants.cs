@@ -17,12 +17,11 @@ internal static class Constants
         IFF2,
     }
 
-    public enum OperandSize : byte
+    public enum OperandSize
     {
-        Byte = 0b00,
-        Word = 0b01,
-        DWord = 0b10,
-        QWord = 0b11, // Unused
+        Byte,
+        Word,
+        DWord,
     }
 
     public enum FlagMasks : ushort
@@ -40,7 +39,10 @@ internal static class Constants
 
     public enum Operation
     {
-        None,
+        None,   // Unknown/Illegal operation
+        Interrupt,
+        NonMaskableInterrupt,
+        Halt,
 
         // Load and store
         LD,     // Load

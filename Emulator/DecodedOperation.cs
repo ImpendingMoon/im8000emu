@@ -7,6 +7,6 @@ internal class DecodedOperation
     public Operand? Operand1 { get; set; } = null;
     public Operand? Operand2 { get; set; } = null;
     public uint BaseAddress { get; set; } = 0x0000_0000;
-    public byte[] Opcode { get; set; } = [];
+    public List<byte> Opcode { get; set; } = [];
     public string DisplayString { get; set; } = string.Empty;
 }
