@@ -13,39 +13,9 @@ internal class CPU
     /// </summary>
     public DecodedOperation Decode()
     {
-
-        // If last instruction raised an exception, handle it
-        // var decodedOperation = new DecodedOperation()
-        // {
-        //     BaseAddress = Registers.GetRegisterDWord(Constants.RegisterTargets.PC),
-        //     DisplayString = "Exception Handler",
-        //     Opcode = new byte[] { 0xFF } // Placeholder, read exception vector number from CPU state
-        // };
-        // ... Set execute callback to handle exception ...
-        // _executeCallbackLength = 0;
-        // return decodedOperation;
-
-        // Else if waiting for interrupts, handle them
-        // var decodedOperation = new DecodedOperation()
-        // {
-        //     BaseAddress = Registers.GetRegisterDWord(Constants.RegisterTargets.PC),
-        //     DisplayString = "Maskable Interrupt", // Or Non-Maskable Interrupt
-        //     Opcode = new byte[] { 0xFF } // Placeholder, read vector number from interrupt bus
-        // };
-        // ... Set execute callback to handle interrupt ...
-        // _executeCallbackLength = 0;
-        // return decodedOperation;
+        // If waiting for interrupts, handle them
 
         // Else if HALT state, return HALT operation
-        // var decodedOperation = new DecodedOperation()
-        // {
-        //     BaseAddress = Registers.GetRegisterDWord(Constants.RegisterTargets.PC),
-        //     DisplayString = "Halted",
-        //     Opcode = new byte[] { } // Not reading any opcode
-        // };
-        // _executeCallback = () => 4; // HALT takes 4 T-cycles per iteration
-        // _executeCallbackLength = 0;
-        // return decodedOperation;
 
         // Else decode the operation at the current PC
         uint pc = Registers.GetRegisterDWord(Constants.RegisterTargets.PC);
@@ -63,38 +33,26 @@ internal class CPU
         {
             BaseAddress = address,
             DisplayString = "NOP",
-            Opcode = [0x00]
+            Opcode = [0b00001111]
         };
-
-        _executeCallback = () =>
-        {
-            return 4;
-        };
-        _executeCallbackLength = decodedOperation.Opcode.Length;
 
         return decodedOperation;
     }
 
     /// <summary>
-    /// Executes the last decoded operation.
+    /// Executes the decoded operation.
     /// </summary>
     /// <returns>Number of T-cycles taken.</returns>
-    public int Execute()
+    public int Execute(DecodedOperation instruction)
     {
-        // Actually read memory at PC in case reads have side effects
-        // Like if a program pointed PC at MMIO for some reason
-
-        // Technically part of Fetch, but cleaner to have here so Decode has no side effects
+        // Advance PC
         uint pc = Registers.GetRegisterDWord(Constants.RegisterTargets.PC);
-        pc += (uint)_executeCallbackLength;
+        pc += 2;
         Registers.SetRegisterDWord(Constants.RegisterTargets.PC, pc);
 
-        return _executeCallback();
+        // Execute instruction
+
+        // Return number of cycles taken
+        return 4;
     }
-
-    // Callback to use in Execute(), set by Decode().
-    private Func<int> _executeCallback = () => 0;
-
-    // Length of the last decoded operation's opcode.
-    private int _executeCallbackLength = 0;
 }
