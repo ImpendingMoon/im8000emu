@@ -42,22 +42,22 @@ namespace im8000emu.Emulator
                     {
                         case 0b00:
                         {
-                            // Unary Register Instructions
+                            DecodeURType(decodedOperation);
                             break;
                         }
                         case 0b01:
                         {
-                            // Unary Memory Instructions
+                            DecodeUMType(decodedOperation);
                             break;
                         }
                         case 0b10:
                         {
-                            // Branch Instructions
+                            DecodeBType(decodedOperation);
                             break;
                         }
                         case 0b11:
                         {
-                            // Nullary Instructions
+                            DecodeNType(decodedOperation);
                             break;
                         }
                         default:
@@ -78,8 +78,13 @@ namespace im8000emu.Emulator
                     {
                         case 0b11:
                         {
-                            // Single byte Instructions
+                            DecodeSBType(decodedOperation);
                             break;
+                        }
+                        default:
+                        {
+                            // Other groups are reserved for expansion.
+                            throw new InvalidOperationException("Invalid variable-length instruction subgroup.");
                         }
                     }
                     break;
@@ -178,7 +183,7 @@ namespace im8000emu.Emulator
             {
                 uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
                 decodedOperation.Operand2.Immediate = immediateValue;
-                AddImmediateValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
+                AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
             }
             else
             {
@@ -254,9 +259,9 @@ namespace im8000emu.Emulator
             byte indirectOperandSelector = (byte)(instructionWord >> 13);
             if (indirectOperandSelector == 0b111)
             {
-                uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
-                indirectOperand.Immediate = immediateValue;
-                AddImmediateValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
+                uint directAddress = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+                indirectOperand.Immediate = directAddress;
+                AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, directAddress);
             }
             else
             {
@@ -267,7 +272,7 @@ namespace im8000emu.Emulator
                 {
                     short displacement = (short)ReadMemoryWord(decodedOperation.BaseAddress);
                     indirectOperand.Displacement = displacement;
-                    AddDisplacementToOpcode(decodedOperation.Opcode, displacement);
+                    AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Word, (uint)displacement);
                 }
             }
 
@@ -295,7 +300,7 @@ namespace im8000emu.Emulator
 
                 uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + (uint)decodedOperation.Opcode.Count, decodedOperation.OperandSize);
                 registerOperand.Immediate = immediateValue;
-                AddImmediateValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
+                AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
             }
             else
             {
@@ -314,6 +319,308 @@ namespace im8000emu.Emulator
             }
 
             decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
+        }
+
+        private void DecodeURType(DecodedOperation decodedOperation)
+        {
+            /* Format UR - Unary Register - (Group 10, Subgroup 00)
+             * Field Positions:
+             * - b0-b1 - Group (10)
+             * - b2-b3 - Sub-Group (00)
+             * - b4-b7 - Opcode (4 bits)
+             * - b8-b9 - Size (2 bits)
+             * - b10-b12 - Register (3 bits)
+             * - b13-b15 - Function (3 bits)
+             */
+
+            // Fetch the second byte of the instruction word
+            decodedOperation.Opcode.Add(_memoryBus.ReadByte(decodedOperation.BaseAddress + 1));
+            ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
+
+            // Decode operation
+            // Operation selector is Opcode + Function. Easier in hardware than in software.
+            byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
+            operationSelector = (byte)(operationSelector << 3);
+            operationSelector |= (byte)((instructionWord >> 13) & 0b00000111);
+
+            decodedOperation.Operation = operationSelector switch
+            {
+                0b0000000 => Constants.Operation.EX_Alt,
+                0b0000001 => Constants.Operation.EXH,
+                0b0000010 => Constants.Operation.PUSH,
+                0b0000011 => Constants.Operation.POP,
+                0b0000100 => Constants.Operation.INC,
+                0b0000101 => Constants.Operation.DEC,
+                0b0000110 => Constants.Operation.NEG,
+                0b0000111 => Constants.Operation.EXT,
+                0b0001000 => Constants.Operation.MLT,
+                0b0001001 => Constants.Operation.DIV,
+                0b0001010 => Constants.Operation.SDIV,
+                0b0001011 => Constants.Operation.CPL,
+                _ => throw new InvalidOperationException($"0b{operationSelector:B7} is not a valid UR-Type operation selector"),
+            };
+
+            // Decode operand size
+            byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
+            decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+
+            // Decode target
+            decodedOperation.Operand1 = new Operand
+            {
+                Target = null,
+                Immediate = null,
+                Indirect = false,
+                Displacement = null
+            };
+
+            byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
+
+            if (operand1Selector == 0b111)
+            {
+                throw new InvalidOperationException("0b111 is not a valid target selector for UR-type instructions");
+            }
+            else
+            {
+                decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
+            }
+
+            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+        }
+
+        private void DecodeUMType(DecodedOperation decodedOperation)
+        {
+            /* Format UM - Unary Memory - (Group 10, Subgroup 01)
+             * Field Positions:
+             * - b0-b1 - Group (10)
+             * - b2-b3 - Sub-Group (01)
+             * - b4-b7 - Opcode (4 bits)
+             * - b8-b9 - Size (2 bits)
+             * - b10-b12 - Function (3 bits)
+             * - b13-b15 - Address register (3 bits)
+             */
+
+            // Fetch the second byte of the instruction word
+            decodedOperation.Opcode.Add(_memoryBus.ReadByte(decodedOperation.BaseAddress + 1));
+            ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
+
+            // Decode operation
+            // Operation selector is Opcode + Function. Easier in hardware than in software.
+            byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
+            operationSelector = (byte)(operationSelector << 3);
+            operationSelector |= (byte)((instructionWord >> 13) & 0b00000111);
+
+            decodedOperation.Operation = operationSelector switch
+            {
+                0b0000001 => Constants.Operation.EXH,
+                0b0000010 => Constants.Operation.PUSH,
+                0b0000100 => Constants.Operation.INC,
+                0b0000101 => Constants.Operation.DEC,
+                0b0000110 => Constants.Operation.NEG,
+                0b0000111 => Constants.Operation.EXT,
+                0b0001000 => Constants.Operation.MLT,
+                0b0001001 => Constants.Operation.DIV,
+                0b0001010 => Constants.Operation.SDIV,
+                0b0001011 => Constants.Operation.CPL,
+                _ => throw new InvalidOperationException($"0b{operationSelector:B7} is not a valid UR-Type operation selector"),
+            };
+
+            // Decode operand size
+            byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
+            decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+
+            // Decode target
+            decodedOperation.Operand1 = new Operand
+            {
+                Target = null,
+                Immediate = null,
+                Indirect = true,
+                Displacement = null
+            };
+
+            byte operand1Selector = (byte)(instructionWord >> 13);
+            if (operand1Selector == 0b111)
+            {
+                uint directAddress = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+                decodedOperation.Operand1.Immediate = directAddress;
+                AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, directAddress);
+            }
+            else
+            {
+                decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
+                // IX, IY, SP always have a displacement.
+                if (decodedOperation.Operand1.Target >= Constants.RegisterTargets.IX)
+                {
+                    short displacement = (short)ReadMemoryWord(decodedOperation.BaseAddress);
+                    decodedOperation.Operand1.Displacement = displacement;
+                    AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Word, (uint)displacement);
+                }
+            }
+
+            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+        }
+
+        private void DecodeBType(DecodedOperation decodedOperation)
+        {
+            /* Format UM - Unary Memory - (Group 10, Subgroup 10)
+             * Field Positions:
+             * - b0-b1 - Group (10)
+             * - b2-b3 - Sub-Group (10)
+             * - b4-b6 - Opcode (3 bits)
+             * - b7-b8 - Branch Mode (2 bits)
+             * - b9-b12 - Condition (4 bits)
+             * - b13-b15 - Address register (3 bits)
+             */
+
+            // ISA DESIGN NOTE:
+            // This instruction format may be split into Jump-Type and Return-Type sub-formats.
+            // Return-Type instructions do not need an address operand, and current encoding wastes bits on it,
+            // which also allows for many illegal encodings.
+            // In addition, it would make the display string generation less ugly.
+
+            // Fetch the second byte of the instruction word
+            decodedOperation.Opcode.Add(_memoryBus.ReadByte(decodedOperation.BaseAddress + 1));
+            ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
+
+            // Decode operation
+            byte operationSelector = (byte)((instructionWord >> 4) & 0b00000111);
+
+            decodedOperation.Operation = operationSelector switch
+            {
+                0b000 => Constants.Operation.JP,
+                0b001 => Constants.Operation.CALL,
+                0b010 => Constants.Operation.RET,
+                0b011 => Constants.Operation.RETI,
+                0b100 => Constants.Operation.RETN,
+                _ => throw new InvalidOperationException($"0b{operationSelector:B3} is not a valid Branch-Type operation selector"),
+            };
+
+            // Decode condition
+            byte conditionSelector = (byte)((instructionWord >> 9) & 0b00001111);
+            decodedOperation.Condition = DecodeCondition(conditionSelector);
+
+            // Decode branch mode for size
+            byte branchModeSelector = (byte)((instructionWord >> 7) & 0b00000011);
+            switch (branchModeSelector)
+            {
+                case 0b00:
+                {
+                    // 8-bit relative address
+                    decodedOperation.OperandSize = Constants.OperandSize.Byte;
+                    break;
+                }
+                case 0b01:
+                {
+                    // 16-bit relative address
+                    decodedOperation.OperandSize = Constants.OperandSize.Word;
+                    break;
+                }
+                case 0b10:
+                {
+                    // 32-bit absolute address
+                    decodedOperation.OperandSize = Constants.OperandSize.DWord;
+                    break;
+                }
+                case 0b11:
+                {
+                    // No address (used for RET, RETI, RETN)
+                    decodedOperation.OperandSize = Constants.OperandSize.DWord;
+                    break;
+                }
+                default:
+                {
+                    throw new InvalidOperationException($"0b{branchModeSelector:B2} is not a valid branch mode selector");
+                }
+            }
+
+            // Decode target if needed
+            if (branchModeSelector != 0b11)
+            {
+                decodedOperation.Operand1 = new Operand
+                {
+                    Target = null,
+                    Immediate = null,
+                    Indirect = false,
+                    Displacement = null
+                };
+
+                byte operand1Selector = (byte)(instructionWord >> 13);
+                if (operand1Selector == 0b111)
+                {
+                    uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
+                    decodedOperation.Operand1.Immediate = immediateValue;
+                    AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
+                }
+                else
+                {
+                    decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
+                }
+
+                if (decodedOperation.Condition != Constants.Condition.Unconditional)
+                {
+                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}, {decodedOperation.Operand1}";
+                }
+                else
+                {
+                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+                }
+            }
+            else
+            {
+                if (decodedOperation.Condition == Constants.Condition.Unconditional)
+                {
+                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}";
+                }
+                else
+                {
+                    decodedOperation.DisplayString = $"{decodedOperation.Operation}";
+                }
+            }
+        }
+
+        private void DecodeNType(DecodedOperation decodedOperation)
+        {
+            /* Format UM - Unary Memory - (Group 10, Subgroup 11)
+             * Field Positions:
+             * - b0-b1 - Group (10)
+             * - b2-b3 - Sub-Group (11)
+             * - b4-b7 - Opcode (4 bits)
+             * - b8-b15 - Function (8 bits)
+             */
+
+            // Placeholder for nullary instruction decoding.
+            // Most of these will be microcoded instructions with unique decoding logic.
+        }
+
+        private void DecodeSBType(DecodedOperation decodedOperation)
+        {
+            byte operationSelector = (byte)(decodedOperation.Opcode[0] >> 4);
+
+            decodedOperation.Operation = operationSelector switch
+            {
+                0b0000 => Constants.Operation.NOP,
+                0b0001 => Constants.Operation.DJNZ,
+                0b0010 => Constants.Operation.JANZ,
+                _ => throw new InvalidOperationException($"0b{operationSelector:B4} is not a valid single-byte operation selector"),
+            };
+
+            if (decodedOperation.Operation == Constants.Operation.DJNZ || decodedOperation.Operation == Constants.Operation.JANZ)
+            {
+                // Fetch immediate operand
+                decodedOperation.Operand1 = new Operand
+                {
+                    Target = null,
+                    Immediate = null,
+                    Indirect = false,
+                    Displacement = null
+                };
+
+                uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 1, Constants.OperandSize.Byte);
+                decodedOperation.Operand1.Immediate = immediateValue;
+                AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Byte, immediateValue);
+            }
+
+            decodedOperation.OperandSize = Constants.OperandSize.Byte;
+            decodedOperation.DisplayString = $"{decodedOperation.Operation}";
         }
 
         private static Constants.OperandSize DecodeOperandSize(byte selector)
@@ -357,6 +664,23 @@ namespace im8000emu.Emulator
             };
         }
 
+        private static Constants.Condition DecodeCondition(byte selector)
+        {
+            return selector switch
+            {
+                0b0000 => Constants.Condition.NZ,
+                0b0001 => Constants.Condition.Z,
+                0b0010 => Constants.Condition.NC,
+                0b0011 => Constants.Condition.C,
+                0b0100 => Constants.Condition.PO,
+                0b0101 => Constants.Condition.PE,
+                0b0110 => Constants.Condition.P,
+                0b0111 => Constants.Condition.M,
+                0b1111 => Constants.Condition.Unconditional,
+                _ => throw new ArgumentException($"0b{selector:B4} is not a valid condition selector"),
+            };
+        }
+
         private uint ReadImmediateValue(uint address, Constants.OperandSize size)
         {
             return size switch
@@ -368,9 +692,9 @@ namespace im8000emu.Emulator
             };
         }
 
-        private void AddImmediateValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint immediateValue)
+        private static void AddValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint value)
         {
-            byte[] immediateBytes = BitConverter.GetBytes(immediateValue);
+            byte[] immediateBytes = BitConverter.GetBytes(value);
 
             switch (size)
             {
@@ -394,12 +718,6 @@ namespace im8000emu.Emulator
 
                 default: throw new ArgumentException($"{size} is not a valid operand size");
             }
-        }
-
-        private void AddDisplacementToOpcode(List<byte> opcode, short displacement)
-        {
-            byte[] displacementBytes = BitConverter.GetBytes(displacement);
-            opcode.AddRange(displacementBytes);
         }
     }
 }

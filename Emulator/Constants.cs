@@ -37,6 +37,27 @@ internal static class Constants
         Carry = 0b0000_0001,
     }
 
+    public enum Condition
+    {
+        NZ,
+        Z,
+        NC,
+        C,
+        PO,
+        PE,
+        P,
+        M,
+        Unconditional,
+    }
+
+    public enum BranchMode
+    {
+        Relative8,
+        Relative16,
+        Direct,
+        Return,
+    }
+
     public enum Operation
     {
         None,   // Unknown/Illegal operation
