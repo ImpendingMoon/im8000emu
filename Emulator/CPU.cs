@@ -1,4 +1,6 @@
-﻿namespace im8000emu.Emulator;
+﻿using System.Diagnostics;
+
+namespace im8000emu.Emulator;
 
 internal class CPU
 {
@@ -32,9 +34,83 @@ internal class CPU
         var decodedOperation = new DecodedOperation
         {
             BaseAddress = address,
-            DisplayString = "NOP",
-            Opcode = [0b00001111]
+            Opcode = [0b00001111] // NOP. Replace with actual opcode fetch.
         };
+
+        var group = decodedOperation.Opcode[0] & 0b00000011;
+
+        // TODO: Implement methods to decode each instruction group. Probably in separate files (because decoding+execution will be thousands of lines long).
+        switch (group)
+        {
+            case 0b00:
+            {
+                // Register-Register Instructions
+                break;
+            }
+
+            case 0b01:
+            {
+                // Register-Memory Instructions
+                break;
+            }
+
+            case 0b10:
+            {
+                // Sub-Grouped Instructions
+                var subgroup = (decodedOperation.Opcode[0] >> 2) & 0b0000011;
+                switch (subgroup)
+                {
+                    case 0b00:
+                    {
+                        // Unary Register Instructions
+                        break;
+                    }
+                    case 0b01:
+                    {
+                        // Unary Memory Instructions
+                        break;
+                    }
+                    case 0b10:
+                    {
+                        // Branch Instructions
+                        break;
+                    }
+                    case 0b11:
+                    {
+                        // Nullary Instructions
+                        break;
+                    }
+                    default:
+                    {
+                        Debug.Assert(false, "Unreachable code reached in opcode decoding.");
+                        break;
+                    }
+                }
+
+                break;
+            }
+
+            case 0b11:
+            {
+                // Variable Length Instructions
+                var subgroup = (decodedOperation.Opcode[0] >> 2) & 0b0000011;
+                switch (subgroup)
+                {
+                    case 0b11:
+                    {
+                        // Single byte Instructions
+                        break;
+                    }
+                }
+                break;
+            }
+
+            default:
+            {
+                Debug.Assert(false, "Unreachable code reached in opcode decoding.");
+                break;
+            }
+        }
 
         return decodedOperation;
     }
@@ -47,7 +123,7 @@ internal class CPU
     {
         // Advance PC
         uint pc = Registers.GetRegisterDWord(Constants.RegisterTargets.PC);
-        pc += 2;
+        pc += (uint)instruction.Opcode.Length;
         Registers.SetRegisterDWord(Constants.RegisterTargets.PC, pc);
 
         // Execute instruction

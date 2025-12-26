@@ -2,10 +2,11 @@
 
 internal class DecodedOperation
 {
-    public uint BaseAddress { get; set; }
+    public Constants.Operation Operation { get; set; } = Constants.Operation.None;
+    public Constants.OperandSize OperandSize { get; set; } = Constants.OperandSize.Byte;
+    public Operand? Operand1 { get; set; } = null;
+    public Operand? Operand2 { get; set; } = null;
+    public uint BaseAddress { get; set; } = 0x0000_0000;
     public byte[] Opcode { get; set; } = [];
     public string DisplayString { get; set; } = string.Empty;
-    public Operand? Operand1 { get; set; }
-    public Operand? Operand2 { get; set; }
-    public int OperandSize { get; set; }
 }

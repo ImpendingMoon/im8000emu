@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace im8000emu.Emulator
+﻿namespace im8000emu.Emulator
 {
     internal class Operand
     {
