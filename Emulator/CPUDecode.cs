@@ -286,9 +286,6 @@ namespace im8000emu.Emulator
 
             // ISA DESIGN NOTE:
             // Maybe it's better to swap Address and Register operands so that we decode in the order they appear in the instruction word?
-            // Address operand is decoded first because it may have a displacement, which is always before immediate values in the instruction stream.
-            // But we may also forbid immediate values for register operands, which would simplify the decoding logic, especially on hardware.
-            // We'll see how often immediate values are used in practice before making that change.
             byte registerOperandSelector = (byte)((instructionWord >> 10) & 0b00000111);
 
             if (registerOperandSelector == 0b111)
@@ -296,6 +293,10 @@ namespace im8000emu.Emulator
                 if (isLoad)
                 {
                     throw new InvalidOperationException("0b111 is not a valid destination target for memory-to-register operations");
+                }
+                else if (indirectOperandSelector == 0b111)
+                {
+                    throw new InvalidOperationException("0b111 is not a valid source target with direct addressing");
                 }
 
                 uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + (uint)decodedOperation.Opcode.Count, decodedOperation.OperandSize);
