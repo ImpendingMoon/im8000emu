@@ -461,119 +461,80 @@ namespace im8000emu.Emulator
 
         private void DecodeBType(DecodedOperation decodedOperation)
         {
-            /* Format UM - Unary Memory - (Group 10, Subgroup 10)
+            /* Format B - Branch - (Group 10-10)
+             *
              * Field Positions:
              * - b0-b1 - Group (10)
              * - b2-b3 - Sub-Group (10)
-             * - b4-b6 - Opcode (3 bits)
-             * - b7-b8 - Branch Mode (2 bits)
+             * - b4-b8 - Opcode (5 bits)
              * - b9-b12 - Condition (4 bits)
              * - b13-b15 - Address register (3 bits)
              */
-
-            // ISA DESIGN NOTE:
-            // This instruction format may be split into Jump-Type and Return-Type sub-formats.
-            // Return-Type instructions do not need an address operand, and current encoding wastes bits on it,
-            // which also allows for many illegal encodings.
-            // In addition, it would make the display string generation less ugly.
 
             // Fetch the second byte of the instruction word
             decodedOperation.Opcode.Add(_memoryBus.ReadByte(decodedOperation.BaseAddress + 1));
             ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
 
             // Decode operation
-            byte operationSelector = (byte)((instructionWord >> 4) & 0b00000111);
-
+            byte operationSelector = (byte)((instructionWord >> 4) & 0b00011111);
             decodedOperation.Operation = operationSelector switch
             {
-                0b000 => Constants.Operation.JP,
-                0b001 => Constants.Operation.CALL,
-                0b010 => Constants.Operation.RET,
-                0b011 => Constants.Operation.RETI,
-                0b100 => Constants.Operation.RETN,
-                _ => throw new InvalidOperationException($"0b{operationSelector:B3} is not a valid Branch-Type operation selector"),
+                0b00000 => Constants.Operation.JP,
+                0b00001 => Constants.Operation.JR_s8,
+                0b00010 => Constants.Operation.JR,
+                0b00100 => Constants.Operation.CALL,
+                0b00101 => Constants.Operation.CALLR_s8,
+                0b00110 => Constants.Operation.CALLR,
+                0b01000 => Constants.Operation.RET,
+                0b01001 => Constants.Operation.RETI,
+                0b01010 => Constants.Operation.RETN,
+                _ => throw new InvalidOperationException($"0b{operationSelector:B5} is not a valid B-Type operation selector"),
             };
 
             // Decode condition
             byte conditionSelector = (byte)((instructionWord >> 9) & 0b00001111);
             decodedOperation.Condition = DecodeCondition(conditionSelector);
 
-            // Decode branch mode for size
-            byte branchModeSelector = (byte)((instructionWord >> 7) & 0b00000011);
-            switch (branchModeSelector)
+            // Size implied by operation
+            decodedOperation.OperandSize = decodedOperation.Operation switch
             {
-                case 0b00:
-                {
-                    // 8-bit relative address
-                    decodedOperation.OperandSize = Constants.OperandSize.Byte;
-                    break;
-                }
-                case 0b01:
-                {
-                    // 16-bit relative address
-                    decodedOperation.OperandSize = Constants.OperandSize.Word;
-                    break;
-                }
-                case 0b10:
-                {
-                    // 32-bit absolute address
-                    decodedOperation.OperandSize = Constants.OperandSize.DWord;
-                    break;
-                }
-                case 0b11:
-                {
-                    // No address (used for RET, RETI, RETN)
-                    decodedOperation.OperandSize = Constants.OperandSize.DWord;
-                    break;
-                }
-                default:
-                {
-                    throw new InvalidOperationException($"0b{branchModeSelector:B2} is not a valid branch mode selector");
-                }
-            }
+                Constants.Operation.JR_s8 or Constants.Operation.CALLR_s8 => Constants.OperandSize.Byte,
+                Constants.Operation.JR or Constants.Operation.CALLR => Constants.OperandSize.Word,
+                _ => Constants.OperandSize.DWord,
+            };
 
-            // Decode target if needed
-            if (branchModeSelector != 0b11)
+            // Decode target
+            decodedOperation.Operand1 = new Operand
             {
-                decodedOperation.Operand1 = new Operand
-                {
-                    Target = null,
-                    Immediate = null,
-                    Indirect = false,
-                    Displacement = null
-                };
+                Target = null,
+                Immediate = null,
+                Indirect = false,
+                Displacement = null
+            };
 
-                byte operand1Selector = (byte)(instructionWord >> 13);
-                if (operand1Selector == 0b111)
-                {
-                    uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
-                    decodedOperation.Operand1.Immediate = immediateValue;
-                    AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
-                }
-                else
-                {
-                    decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
-                }
-
-                if (decodedOperation.Condition != Constants.Condition.Unconditional)
-                {
-                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}, {decodedOperation.Operand1}";
-                }
-                else
-                {
-                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
-                }
+            byte operand1Selector = (byte)(instructionWord >> 13);
+            if (operand1Selector == 0b111)
+            {
+                uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
+                decodedOperation.Operand1.Immediate = immediateValue;
+                AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
             }
             else
             {
-                if (decodedOperation.Condition == Constants.Condition.Unconditional)
-                {
-                    decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}";
-                }
-                else
-                {
-                    decodedOperation.DisplayString = $"{decodedOperation.Operation}";
-                }
+                decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
+            }
+
+            if (decodedOperation.Condition == Constants.Condition.Unconditional)
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+            }
+            else if (decodedOperation.Operation == Constants.Operation.RET || decodedOperation.Operation == Constants.Operation.RETI || decodedOperation.Operation == Constants.Operation.RETN)
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}";
+            }
+            else
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}, {decodedOperation.Operand1}";
             }
         }
 

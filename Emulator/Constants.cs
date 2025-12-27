@@ -135,10 +135,14 @@ internal static class Constants
 
         // Flow control
         NOP,    // No Operation
-        JP,     // Jump/Jump Relative
+        JP,     // Jump
+        JR_s8,  // Jump Short Relative
+        JR,     // Jump Relative
         DJNZ,   // Decrement, Jump if Not Zero
         JANZ,   // Jump if A is Not Zero
-        CALL,   // Call/Call Relative
+        CALL,   // Call
+        CALLR,  // Call Relative
+        CALLR_s8,// Call Short Relative
         RET,    // Return
         RETI,   // Return from Interrupt
         RETN,   // Return from Non-Maskable Interrupt
