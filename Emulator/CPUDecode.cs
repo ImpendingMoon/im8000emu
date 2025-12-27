@@ -422,7 +422,7 @@ namespace im8000emu.Emulator
                 0b0001001 => Constants.Operation.DIV,
                 0b0001010 => Constants.Operation.SDIV,
                 0b0001011 => Constants.Operation.CPL,
-                _ => throw new InvalidOperationException($"0b{operationSelector:B7} is not a valid UR-Type operation selector"),
+                _ => throw new InvalidOperationException($"0b{operationSelector:B7} is not a valid UM-Type operation selector"),
             };
 
             // Decode operand size
@@ -541,7 +541,7 @@ namespace im8000emu.Emulator
 
         private void DecodeNType(DecodedOperation decodedOperation)
         {
-            /* Format UM - Unary Memory - (Group 10, Subgroup 11)
+            /* Format N - Nullary - (Group 10, Subgroup 11)
              * Field Positions:
              * - b0-b1 - Group (10)
              * - b2-b3 - Sub-Group (11)
@@ -549,12 +549,196 @@ namespace im8000emu.Emulator
              * - b8-b15 - Function (8 bits)
              */
 
-            // Placeholder for nullary instruction decoding.
-            // Most of these will be microcoded instructions with unique decoding logic.
+            // Fetch the second byte of the instruction word
+            decodedOperation.Opcode.Add(_memoryBus.ReadByte(decodedOperation.BaseAddress + 1));
+            ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
+
+            // Decode operation
+            byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
+            byte functionSelector = (byte)(instructionWord >> 8);
+
+            // Opcode acts as grouping for functions
+            switch (operationSelector)
+            {
+                // Block Operations
+                case 0b0000:
+                case 0b0001:
+                {
+                    decodedOperation.Operation = functionSelector switch
+                    {
+                        0b00000000 => Constants.Operation.LDI,
+                        0b00000001 => Constants.Operation.LDIR,
+                        0b00000010 => Constants.Operation.LDD,
+                        0b00000011 => Constants.Operation.LDDR,
+                        0b00000100 => Constants.Operation.CPI,
+                        0b00000101 => Constants.Operation.CPIR,
+                        0b00000110 => Constants.Operation.CPD,
+                        0b00000111 => Constants.Operation.CPDR,
+                        0b00001000 => Constants.Operation.TSI,
+                        0b00001001 => Constants.Operation.TSIR,
+                        0b00001010 => Constants.Operation.TSD,
+                        0b00001011 => Constants.Operation.TSDR,
+                        0b00001100 => Constants.Operation.INI,
+                        0b00001101 => Constants.Operation.INIR,
+                        0b00001110 => Constants.Operation.IND,
+                        0b00001111 => Constants.Operation.INDR,
+                        0b00010000 => Constants.Operation.OUTI,
+                        0b00010001 => Constants.Operation.OTIR,
+                        0b00010010 => Constants.Operation.OUTD,
+                        0b00010011 => Constants.Operation.OTDR,
+                        _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid Block Operation function selector"),
+                    };
+                    // 0b0000 = Byte, 0b0001 = Word
+                    decodedOperation.OperandSize = operationSelector == 0 ? Constants.OperandSize.Byte : Constants.OperandSize.Word;
+                    break;
+                }
+                // Exchange
+                case 0b0100:
+                {
+                    decodedOperation.Operation = functionSelector switch
+                    {
+                        0b00000000 => Constants.Operation.EXX,
+                        0b00000001 => Constants.Operation.EXI,
+                        _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid Exchange function selector"),
+                    };
+                    break;
+                }
+                // Control Flow
+                case 0b0101:
+                {
+                    decodedOperation.Operation = functionSelector switch
+                    {
+                        0b00000000 => Constants.Operation.RST,
+                        0b00000001 => Constants.Operation.SCF,
+                        0b00000010 => Constants.Operation.CCF,
+                        _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid Control Flow function selector"),
+                    };
+
+                    // RST takes an immediate byte operand
+                    if (decodedOperation.Operation == Constants.Operation.RST)
+                    {
+                        decodedOperation.OperandSize = Constants.OperandSize.Byte;
+                        decodedOperation.Operand1 = new Operand
+                        {
+                            Target = null,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+                        uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.Byte);
+                        decodedOperation.Operand1.Immediate = immediateValue;
+                        AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Byte, immediateValue);
+                    }
+                    break;
+                }
+                // BCD
+                case 0b0110:
+                {
+                    decodedOperation.Operation = functionSelector switch
+                    {
+                        0b00000000 => Constants.Operation.DAA,
+                        0b00000001 => Constants.Operation.RLD,
+                        0b00000010 => Constants.Operation.RRD,
+                        _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid BCD function selector"),
+                    };
+                    break;
+                }
+                // System
+                case 0b1000:
+                {
+                    decodedOperation.Operation = functionSelector switch
+                    {
+                        0b00000000 => Constants.Operation.HALT,
+                        0b00000001 => Constants.Operation.EI,
+                        0b00000010 => Constants.Operation.DI,
+                        0b00000011 => Constants.Operation.IM1,
+                        0b00000100 => Constants.Operation.IM2,
+                        0b00000101 => Constants.Operation.LD_I_NN,
+                        0b00000110 => Constants.Operation.LD_R_A,
+                        0b00000111 => Constants.Operation.LD_A_R,
+                        _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid System function selector"),
+                    };
+
+                    // LD_I_NN takes an immediate dword operand, LD_R_A and LD_A_R operate on implied registers
+                    if (decodedOperation.Operation == Constants.Operation.LD_I_NN)
+                    {
+                        decodedOperation.OperandSize = Constants.OperandSize.DWord;
+                        decodedOperation.Operand1 = new Operand
+                        {
+                            Target = null,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+                        uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+                        decodedOperation.Operand1.Immediate = immediateValue;
+                        AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, immediateValue);
+                    }
+                    else if (decodedOperation.Operation == Constants.Operation.LD_R_A)
+                    {
+                        decodedOperation.OperandSize = Constants.OperandSize.Word;
+
+                        decodedOperation.Operand1 = new Operand
+                        {
+                            Target = Constants.RegisterTargets.R,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+
+                        decodedOperation.Operand2 = new Operand
+                        {
+                            Target = Constants.RegisterTargets.A,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+                    }
+                    else if (decodedOperation.Operation == Constants.Operation.LD_A_R)
+                    {
+                        decodedOperation.OperandSize = Constants.OperandSize.Word;
+                        decodedOperation.Operand1 = new Operand
+                        {
+                            Target = Constants.RegisterTargets.A,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+                        decodedOperation.Operand2 = new Operand
+                        {
+                            Target = Constants.RegisterTargets.R,
+                            Immediate = null,
+                            Indirect = false,
+                            Displacement = null
+                        };
+                    }
+                    break;
+                }
+            }
+
+            if (decodedOperation.Operand1 is not null && decodedOperation.Operand2 is not null)
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
+            }
+            else if (decodedOperation.Operand1 is not null)
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+            }
+            else
+            {
+                decodedOperation.DisplayString = $"{decodedOperation.Operation}";
+            }
         }
 
         private void DecodeSBType(DecodedOperation decodedOperation)
         {
+            /* Format SB - Single-Byte - (Group 11, Subgroup 11)
+             * Field Positions:
+             * - b0-b1 - Group (11)
+             * - b2-b3 - Sub-Group (11)
+             * - b4-b7 - Opcode (4 bits)
+             */
+
             byte operationSelector = (byte)(decodedOperation.Opcode[0] >> 4);
 
             decodedOperation.Operation = operationSelector switch
