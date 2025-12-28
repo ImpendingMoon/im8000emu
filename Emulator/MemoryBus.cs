@@ -11,7 +11,7 @@
         public byte ReadByte(uint address)
         {
             // Placeholder implementation
-            return 0x00;
+            return 0x25;
         }
 
         public void WriteByte(uint address, byte value)

@@ -19,7 +19,6 @@ namespace im8000emu.Emulator
 
             var group = decodedOperation.Opcode[0] & 0b00000011;
 
-            // TODO: Implement methods to decode each instruction group.
             switch (group)
             {
                 case 0b00:
@@ -103,6 +102,8 @@ namespace im8000emu.Emulator
             {
                 decodedOperation.FetchCycles += 1;
             }
+            // 3 T-states per bus cycle
+            decodedOperation.FetchCycles *= 3;
             return decodedOperation;
         }
 
@@ -196,7 +197,7 @@ namespace im8000emu.Emulator
                 decodedOperation.Operand2.Target = DecodeRegisterTarget(operand2Selector, decodedOperation.OperandSize);
             }
 
-            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
+            decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
         }
 
         private void DecodeRMType(DecodedOperation decodedOperation)
@@ -271,7 +272,7 @@ namespace im8000emu.Emulator
             }
             else
             {
-                indirectOperand.Target = DecodeRegisterTarget(indirectOperandSelector, decodedOperation.OperandSize);
+                indirectOperand.Target = DecodeRegisterTarget(indirectOperandSelector, Constants.OperandSize.DWord);
 
                 // IX, IY, SP always have a displacement. Displacements are always before immediate values.
                 if (indirectOperand.Target >= Constants.RegisterTargets.IX)
@@ -325,7 +326,7 @@ namespace im8000emu.Emulator
                 decodedOperation.Operand2 = registerOperand;
             }
 
-            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
+            decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
         }
 
         private void DecodeURType(DecodedOperation decodedOperation)
@@ -391,7 +392,7 @@ namespace im8000emu.Emulator
                 decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
             }
 
-            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+            decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
         }
 
         private void DecodeUMType(DecodedOperation decodedOperation)
@@ -453,7 +454,7 @@ namespace im8000emu.Emulator
             }
             else
             {
-                decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
+                decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, Constants.OperandSize.DWord);
                 // IX, IY, SP always have a displacement.
                 if (decodedOperation.Operand1.Target >= Constants.RegisterTargets.IX)
                 {
@@ -463,7 +464,7 @@ namespace im8000emu.Emulator
                 }
             }
 
-            decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+            decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
         }
 
         private void DecodeBType(DecodedOperation decodedOperation)
@@ -533,15 +534,15 @@ namespace im8000emu.Emulator
 
             if (decodedOperation.Condition == Constants.Condition.Unconditional)
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
             }
             else if (decodedOperation.Operation == Constants.Operation.RET || decodedOperation.Operation == Constants.Operation.RETI || decodedOperation.Operation == Constants.Operation.RETN)
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Condition}";
             }
             else
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Condition}, {decodedOperation.Operand1}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Condition}, {decodedOperation.Operand1}";
             }
         }
 
@@ -724,15 +725,15 @@ namespace im8000emu.Emulator
 
             if (decodedOperation.Operand1 is not null && decodedOperation.Operand2 is not null)
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
             }
             else if (decodedOperation.Operand1 is not null)
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation} {decodedOperation.Operand1}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
             }
             else
             {
-                decodedOperation.DisplayString = $"{decodedOperation.Operation}";
+                decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)}";
             }
         }
 
@@ -772,7 +773,7 @@ namespace im8000emu.Emulator
             }
 
             decodedOperation.OperandSize = Constants.OperandSize.Byte;
-            decodedOperation.DisplayString = $"{decodedOperation.Operation}";
+            decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
         }
 
         private static Constants.OperandSize DecodeOperandSize(byte selector)
@@ -870,6 +871,17 @@ namespace im8000emu.Emulator
 
                 default: throw new ArgumentException($"{size} is not a valid operand size");
             }
+        }
+
+        private static string GetOperationString(Constants.Operation operation, Constants.OperandSize size)
+        {
+            return size switch
+            {
+                Constants.OperandSize.Byte => $"{operation}.B",
+                Constants.OperandSize.Word => $"{operation}.W",
+                Constants.OperandSize.DWord => $"{operation}.D",
+                _ => throw new ArgumentException($"{size} is not a valid operand size"),
+            };
         }
     }
 }
