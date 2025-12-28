@@ -63,7 +63,7 @@ internal static class Constants
         None,   // Unknown/Illegal operation
         Interrupt,
         NonMaskableInterrupt,
-        Halt,
+        HaltState,
 
         // Load and store
         LD,     // Load
@@ -138,14 +138,14 @@ internal static class Constants
         JP,     // Jump
         JR_s8,  // Jump Short Relative
         JR,     // Jump Relative
-        DJNZ,   // Decrement, Jump if Not Zero
-        JANZ,   // Jump if A is Not Zero
         CALL,   // Call
-        CALLR,  // Call Relative
         CALLR_s8,// Call Short Relative
+        CALLR,  // Call Relative
         RET,    // Return
         RETI,   // Return from Interrupt
         RETN,   // Return from Non-Maskable Interrupt
+        DJNZ,   // Decrement, Jump if Not Zero
+        JANZ,   // Jump if A is Not Zero
         RST,    // Software Interrupt
         SCF,    // Set Carry Flag
         CCF,    // Complement Carry Flag

@@ -9,14 +9,15 @@ internal class Program
 
         var cpu = new Emulator.CPU(memoryBus, ioBus);
 
-        // Example: Run a loop of only `LD A, A` instructions (opcode 0x00 0x00)
+        // Example: Run a loop of whatever is in memory
         for (int i = 0; i < 10; i++)
         {
             var operation = cpu.Decode();
 
-            Console.WriteLine($"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString}");
+            Console.WriteLine($"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString} at address 0x{cpu.Registers.GetRegisterDWord(Emulator.Constants.RegisterTargets.PC):X8}");
 
-            cpu.Execute(operation);
+            int cycles = cpu.Execute(operation);
+            Console.WriteLine($"T-cycles taken: {cycles}");
         }
     }
 }

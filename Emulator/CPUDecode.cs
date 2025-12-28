@@ -97,6 +97,12 @@ namespace im8000emu.Emulator
                 }
             }
 
+            // Calculate fetch cycles: 2 cycles per word, plus 1 cycle if odd byte count or unaligned.
+            decodedOperation.FetchCycles = decodedOperation.Opcode.Count / 2;
+            if (decodedOperation.Opcode.Count % 2 != 0 || decodedOperation.BaseAddress % 2 == 1)
+            {
+                decodedOperation.FetchCycles += 1;
+            }
             return decodedOperation;
         }
 
