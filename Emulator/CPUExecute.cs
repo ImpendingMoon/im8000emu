@@ -4,6 +4,7 @@ internal partial class CPU
 {
     private int Execute_None(DecodedOperation operation)
     {
+        // Here for completeness. None should be caught in decoder.
         return operation.FetchCycles;
     }
 
@@ -19,20 +20,21 @@ internal partial class CPU
         return operation.FetchCycles + 11; // Example cycle count for NMI handling
     }
 
+    // Spin
     private int Execute_HaltState(DecodedOperation operation)
     {
-        // HALT handling logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for HALT handling
+        return 4;
     }
 
+    // Load
     private int Execute_LD(DecodedOperation operation)
     {
-        int cycles = operation.FetchCycles + 1;
-
         if (operation.Operand1 is null || operation.Operand2 is null)
         {
             throw new ArgumentException("LD requires two operands");
         }
+
+        int cycles = operation.FetchCycles + 1;
 
         (uint value, int readCycles) = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += readCycles;
@@ -42,14 +44,15 @@ internal partial class CPU
         return cycles;
     }
 
+    // Exchange
     private int Execute_EX(DecodedOperation operation)
     {
-        int cycles = operation.FetchCycles + 1;
-
         if (operation.Operand1 is null || operation.Operand2 is null)
         {
             throw new ArgumentException("EX requires two operands");
         }
+
+        int cycles = operation.FetchCycles + 1;
 
         (uint value1, int readCycles1) = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += readCycles1;
@@ -62,40 +65,142 @@ internal partial class CPU
         return cycles;
     }
 
+    // Exchange with Alternate
     private int Execute_EX_Alt(DecodedOperation operation)
     {
+        // TODO: Write helper method for RegisterTarget->Alternate RegisterTarget
+
         // Exchange alternate registers logic would go here
         return operation.FetchCycles + 1; // Example cycle count for EX_Alt operation
     }
 
+    // Exchange Primary with Alternate
     private int Execute_EXX(DecodedOperation operation)
     {
         // Exchange primary registers logic would go here
         return operation.FetchCycles + 1; // Example cycle count for EXX operation
     }
 
+    // Exchange Index with Alternate
     private int Execute_EXI(DecodedOperation operation)
     {
         // Exchange index registers logic would go here
         return operation.FetchCycles + 1; // Example cycle count for EXI operation
     }
 
+    // Exchange Halves
     private int Execute_EXH(DecodedOperation operation)
     {
-        // Exchange halves logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EXH operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("EXH requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        (uint value, int readCycles) = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += readCycles;
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte temp = (byte)(value >> 4);
+                temp |= (byte)(value << 4);
+                value = temp;
+                break;
+            }
+            case Constants.OperandSize.Word:
+            {
+                ushort temp = (ushort)(value >> 8);
+                temp |= (ushort)(value << 8);
+                value = temp;
+                break;
+            }
+            case Constants.OperandSize.DWord:
+            {
+                uint temp = value >> 16;
+                temp |= value << 16;
+                value = temp;
+                break;
+            }
+        }
+
+        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+
+        return cycles;
     }
 
+    // Push to stack
     private int Execute_PUSH(DecodedOperation operation)
     {
-        // Push operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for PUSH operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("PUSH requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        (uint value, int readCycles) = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += readCycles;
+
+        // PUSH sign extends into dwords
+        if (operation.OperandSize == Constants.OperandSize.Byte)
+        {
+            value = Helpers.BitHelper.SignExtend(value, 8);
+        }
+        else if (operation.OperandSize == Constants.OperandSize.Word)
+        {
+            value = Helpers.BitHelper.SignExtend(value, 16);
+        }
+
+        uint stackPointer = Registers.GetRegisterDWord(Constants.RegisterTargets.SP);
+
+        // Pre-decrement for PUSH
+        stackPointer -= 2;
+
+        // Write value to memory
+        WriteMemoryDWord(stackPointer, value);
+
+        // Writeback SP
+        Registers.SetRegisterDWord(Constants.RegisterTargets.SP, stackPointer);
+
+        // Calculate cycles
+        bool aligned = stackPointer % 2 == 0;
+        cycles += aligned ? 6 : 9;
+
+        return cycles;
     }
 
+    // Pop from stack
     private int Execute_POP(DecodedOperation operation)
     {
-        // Pop operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for POP operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("POP requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        uint stackPointer = Registers.GetRegisterDWord(Constants.RegisterTargets.SP);
+
+        // Read value from memory
+        uint value = ReadMemoryDWord(stackPointer);
+
+        // Write to destination
+        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+
+        // Post-increment for POP
+        stackPointer += 2;
+
+        // Writeback SP
+        Registers.SetRegisterDWord(Constants.RegisterTargets.SP, stackPointer);
+
+        // Calculate cycles
+        bool aligned = stackPointer % 2 == 0;
+        cycles += aligned ? 6 : 9;
+
+        return cycles;
     }
 
     private int Execute_IN(DecodedOperation operation)
@@ -410,6 +515,7 @@ internal partial class CPU
         return operation.FetchCycles + 1; // Example cycle count for RRD operation
     }
 
+    // No operation
     private int Execute_NOP(DecodedOperation operation)
     {
         return operation.FetchCycles + 1;
