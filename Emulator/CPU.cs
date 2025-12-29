@@ -104,6 +104,14 @@ internal partial class CPU
 
     public Registers Registers { get; } = new Registers();
 
+    public void Reset()
+    {
+        Registers.ClearRegisters();
+        // Read reset vector
+        uint resetVector = ReadMemoryDWord(0x00000000);
+        Registers.SetRegisterDWord(Constants.RegisterTargets.PC, resetVector);
+    }
+
     /// <summary>
     /// Fetches and decodes the next operation, including interrupt servicing.
     /// </summary>

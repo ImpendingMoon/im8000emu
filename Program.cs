@@ -11,7 +11,7 @@ internal class Program
 
         var cpu = new Emulator.CPU(memoryBus, ioBus);
 
-        //cpu.Registers.SetRegisterDWord(Emulator.Constants.RegisterTargets.PC, 1);
+        cpu.Reset();
 
         // Example: Run a loop of whatever is in memory
         for (int i = 0; i < 100; i++)
