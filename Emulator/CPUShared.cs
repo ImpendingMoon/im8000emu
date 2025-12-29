@@ -7,38 +7,63 @@ internal partial class CPU
     private readonly MemoryBus _ioBus;
 
     // TODO: Refactor to ReadMemory(uint address, Constants.OperandSize size)
-    private byte ReadMemoryByte(uint address)
+    private uint ReadMemory(uint address, Constants.OperandSize size)
     {
-        return _memoryBus.ReadByte(address);
+        switch (size)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                return _memoryBus.ReadByte(address);
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                Span<byte> data = _memoryBus.ReadByteArray(address, 2);
+                return BitConverter.ToUInt16(data);
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                Span<byte> data = _memoryBus.ReadByteArray(address, 4);
+                return BitConverter.ToUInt32(data);
+            }
+
+            default:
+            {
+                throw new ArgumentException($"ReadMemory is not implemented for OperandSize {size}");
+            }
+        }
     }
 
-    private ushort ReadMemoryWord(uint address)
+    private void WriteMemory(uint address, Constants.OperandSize size, uint value)
     {
-        Span<byte> data = _memoryBus.ReadByteArray(address, 2);
-        return BitConverter.ToUInt16(data);
-    }
+        switch (size)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                _memoryBus.WriteByte(address, (byte)value);
+                break;
+            }
 
-    private uint ReadMemoryDWord(uint address)
-    {
-        Span<byte> data = _memoryBus.ReadByteArray(address, 4);
-        return BitConverter.ToUInt32(data);
-    }
+            case Constants.OperandSize.Word:
+            {
+                byte[] bytes = BitConverter.GetBytes(value);
+                _memoryBus.WriteByteArray(address, bytes);
+                break;
+            }
 
-    private void WriteMemoryByte(uint address, byte value)
-    {
-        _memoryBus.WriteByte(address, value);
-    }
+            case Constants.OperandSize.DWord:
+            {
+                byte[] bytes = BitConverter.GetBytes(value);
+                _memoryBus.WriteByteArray(address, bytes);
+                break;
+            }
 
-    private void WriteMemoryWord(uint address, ushort value)
-    {
-        byte[] bytes = BitConverter.GetBytes(value);
-        _memoryBus.WriteByteArray(address, bytes);
-    }
-
-    private void WriteMemoryDWord(uint address, uint value)
-    {
-        byte[] bytes = BitConverter.GetBytes(value);
-        _memoryBus.WriteByteArray(address, bytes);
+            default:
+            {
+                throw new ArgumentException($"WriteMemory is not implemented for OperandSize {size}");
+            }
+        }
     }
 
     private (uint value, int cycles) GetOperandValue(Operand operand, Constants.OperandSize size)
@@ -54,28 +79,14 @@ internal partial class CPU
         if (operand.Indirect)
         {
             uint address = GetEffectiveAddress(operand);
-
-            value = size switch
-            {
-                Constants.OperandSize.Byte => ReadMemoryByte(address),
-                Constants.OperandSize.Word => ReadMemoryWord(address),
-                Constants.OperandSize.DWord => ReadMemoryDWord(address),
-                _ => throw new ArgumentException($"{size} is not a valid operand size")
-            };
-
+            value = ReadMemory(address, size);
             cycles = GetMemoryCycles(address, size);
         }
         else
         {
             if (operand.Target is not null)
             {
-                value = size switch
-                {
-                    Constants.OperandSize.Byte => Registers.GetRegisterByte(operand.Target.Value, false),
-                    Constants.OperandSize.Word => Registers.GetRegisterWord(operand.Target.Value),
-                    Constants.OperandSize.DWord => Registers.GetRegisterDWord(operand.Target.Value),
-                    _ => throw new ArgumentException($"{size} is not a valid operand size")
-                };
+                value = Registers.GetRegister(operand.Target.Value, size);
             }
             else if (operand.Immediate is not null)
             {
@@ -98,22 +109,7 @@ internal partial class CPU
         if (operand.Indirect)
         {
             uint address = GetEffectiveAddress(operand);
-
-            switch (size)
-            {
-                case Constants.OperandSize.Byte:
-                    WriteMemoryByte(address, (byte)value);
-                    break;
-                case Constants.OperandSize.Word:
-                    WriteMemoryWord(address, (ushort)value);
-                    break;
-                case Constants.OperandSize.DWord:
-                    WriteMemoryDWord(address, value);
-                    break;
-                default:
-                    throw new ArgumentException($"{size} is not a valid operand size");
-            }
-
+            WriteMemory(address, size, value);
             cycles = GetMemoryCycles(address, size);
         }
         else
@@ -123,18 +119,7 @@ internal partial class CPU
                 throw new ArgumentException("Cannot writeback to an immediate operand");
             }
 
-            switch (size)
-            {
-                case Constants.OperandSize.Byte:
-                    Registers.SetRegisterByte(operand.Target.Value, (byte)value, false);
-                    break;
-                case Constants.OperandSize.Word:
-                    Registers.SetRegisterWord(operand.Target.Value, (ushort)value);
-                    break;
-                case Constants.OperandSize.DWord:
-                    Registers.SetRegisterDWord(operand.Target.Value, value);
-                    break;
-            }
+            Registers.SetRegister(operand.Target.Value, size, value);
         }
 
         return cycles;
@@ -151,7 +136,7 @@ internal partial class CPU
 
         if (operand.Target is not null)
         {
-            address = Registers.GetRegisterDWord(operand.Target.Value);
+            address = Registers.GetRegister(operand.Target.Value, Constants.OperandSize.DWord);
         }
         else if (operand.Immediate is not null)
         {
@@ -185,41 +170,11 @@ internal partial class CPU
         // In software, easier to actually exchange the values
         Constants.RegisterTargets alternate = Constants.RegisterToAlternate[register];
 
-        switch (size)
-        {
-            case Constants.OperandSize.Word:
-            {
-                ushort primaryValue = Registers.GetRegisterWord(register);
-                ushort alternateValue = Registers.GetRegisterWord(alternate);
+        ushort primaryValue = (ushort)Registers.GetRegister(register, Constants.OperandSize.Word);
+        ushort alternateValue = (ushort)Registers.GetRegister(alternate, Constants.OperandSize.Word);
 
-                Registers.SetRegisterWord(alternate, primaryValue);
-                Registers.SetRegisterWord(register, alternateValue);
-
-                break;
-            }
-
-            case Constants.OperandSize.DWord:
-            {
-                uint primaryValue = Registers.GetRegisterDWord(register);
-                uint alternateValue = Registers.GetRegisterDWord(alternate);
-
-                Registers.SetRegisterDWord(alternate, primaryValue);
-                Registers.SetRegisterDWord(register, alternateValue);
-
-                break;
-            }
-        }
-    }
-
-    private uint ReadImmediateValue(uint address, Constants.OperandSize size)
-    {
-        return size switch
-        {
-            Constants.OperandSize.Byte => ReadMemoryByte(address),
-            Constants.OperandSize.Word => ReadMemoryWord(address),
-            Constants.OperandSize.DWord => ReadMemoryDWord(address),
-            _ => throw new ArgumentException($"{size} is not a valid operand size"),
-        };
+        Registers.SetRegister(alternate, Constants.OperandSize.Word, primaryValue);
+        Registers.SetRegister(register, Constants.OperandSize.Word, alternateValue);
     }
 
     private static void AddValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint value)

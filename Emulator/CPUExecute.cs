@@ -185,16 +185,16 @@ internal partial class CPU
             value = Helpers.BitHelper.SignExtend(value, 16);
         }
 
-        uint stackPointer = Registers.GetRegisterDWord(Constants.RegisterTargets.SP);
+        uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
         // Pre-decrement for PUSH
         stackPointer -= 2;
 
         // Write value to memory
-        WriteMemoryDWord(stackPointer, value);
+        WriteMemory(stackPointer, Constants.OperandSize.DWord, value);
 
         // Writeback SP
-        Registers.SetRegisterDWord(Constants.RegisterTargets.SP, stackPointer);
+        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
 
         // Calculate cycles
         bool aligned = stackPointer % 2 == 0;
@@ -213,10 +213,10 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + 1;
 
-        uint stackPointer = Registers.GetRegisterDWord(Constants.RegisterTargets.SP);
+        uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
         // Read value from memory
-        uint value = ReadMemoryDWord(stackPointer);
+        uint value = ReadMemory(stackPointer, Constants.OperandSize.Word);
 
         // Write to destination
         cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
@@ -225,7 +225,7 @@ internal partial class CPU
         stackPointer += 2;
 
         // Writeback SP
-        Registers.SetRegisterDWord(Constants.RegisterTargets.SP, stackPointer);
+        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
 
         // Calculate cycles
         bool aligned = stackPointer % 2 == 0;

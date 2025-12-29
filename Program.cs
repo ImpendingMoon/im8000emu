@@ -18,7 +18,7 @@ internal class Program
             {
                 Emulator.DecodedOperation operation = cpu.Decode();
 
-                Console.WriteLine($"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString} at address 0x{cpu.Registers.GetRegisterDWord(Emulator.Constants.RegisterTargets.PC):X8}");
+                Console.WriteLine($"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString} at address 0x{cpu.Registers.GetRegister(Emulator.Constants.RegisterTargets.PC, Emulator.Constants.OperandSize.DWord):X8}");
 
                 int cycles = cpu.Execute(operation);
                 Console.WriteLine($"T-cycles taken: {cycles}");
@@ -27,12 +27,12 @@ internal class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception during execution: {ex.Message}");
+                //Console.WriteLine($"Exception during execution: {ex.Message}");
 
                 // Advance PC to avoid infinite loop.
-                uint pc = cpu.Registers.GetRegisterDWord(Emulator.Constants.RegisterTargets.PC);
+                uint pc = cpu.Registers.GetRegister(Emulator.Constants.RegisterTargets.PC, Emulator.Constants.OperandSize.DWord);
                 pc += 2;
-                cpu.Registers.SetRegisterDWord(Emulator.Constants.RegisterTargets.PC, pc);
+                cpu.Registers.SetRegister(Emulator.Constants.RegisterTargets.PC, Emulator.Constants.OperandSize.DWord, pc);
             }
 
             Console.WriteLine();

@@ -13,62 +13,58 @@ internal sealed class Registers
         }
     }
 
-    public byte GetRegisterByte(Constants.RegisterTargets reg, bool upperByte)
+    public uint GetRegister(Constants.RegisterTargets reg, Constants.OperandSize size)
     {
-        int position = _registerTargetToArrayPosition[reg];
-        if (upperByte)
+        int index = _registerTargetToArrayPosition[reg];
+
+        return size switch
         {
-            position += 1;
-        }
-
-        return _registerData[position];
+            Constants.OperandSize.Byte => _registerData[index],
+            Constants.OperandSize.Word => BitConverter.ToUInt16(_registerData, index),
+            Constants.OperandSize.DWord => BitConverter.ToUInt32(_registerData, index),
+            _ => throw new ArgumentException($"GetRegister does not support OperandSize {size}")
+        };
     }
 
-    public void SetRegisterByte(Constants.RegisterTargets reg, byte value, bool upperByte)
+    public void SetRegister(Constants.RegisterTargets reg, Constants.OperandSize size, uint value)
     {
-        int position = _registerTargetToArrayPosition[reg];
-        if (upperByte)
+        int index = _registerTargetToArrayPosition[reg];
+
+        switch (size)
         {
-            position += 1;
+            case Constants.OperandSize.Byte:
+            {
+                _registerData[index] = (byte)value;
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                int position = _registerTargetToArrayPosition[reg];
+                byte[] bytes = BitConverter.GetBytes(value);
+                Array.Copy(bytes, 0, _registerData, position, 2);
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                int position = _registerTargetToArrayPosition[reg];
+                byte[] bytes = BitConverter.GetBytes(value);
+                Array.Copy(bytes, 0, _registerData, position, 4);
+                break;
+            }
         }
-        _registerData[position] = value;
-    }
-
-    public ushort GetRegisterWord(Constants.RegisterTargets reg)
-    {
-        int position = _registerTargetToArrayPosition[reg];
-        return BitConverter.ToUInt16(_registerData, position);
-    }
-
-    public void SetRegisterWord(Constants.RegisterTargets reg, ushort value)
-    {
-        int position = _registerTargetToArrayPosition[reg];
-        byte[] bytes = BitConverter.GetBytes(value);
-        Array.Copy(bytes, 0, _registerData, position, 2);
-    }
-
-    public uint GetRegisterDWord(Constants.RegisterTargets reg)
-    {
-        int position = _registerTargetToArrayPosition[reg];
-        return BitConverter.ToUInt32(_registerData, position);
-    }
-
-    public void SetRegisterDWord(Constants.RegisterTargets reg, uint value)
-    {
-        int position = _registerTargetToArrayPosition[reg];
-        byte[] bytes = BitConverter.GetBytes(value);
-        Array.Copy(bytes, 0, _registerData, position, 4);
     }
 
     public bool GetFlag(Constants.FlagMasks flag)
     {
-        ushort flags = GetRegisterWord(Constants.RegisterTargets.F);
+        ushort flags = (ushort)GetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word);
         return (flags & (ushort)flag) != 0;
     }
 
     public void SetFlag(Constants.FlagMasks flag, bool value)
     {
-        ushort flags = GetRegisterWord(Constants.RegisterTargets.F);
+        ushort flags = (ushort)GetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word);
 
         if (value)
         {
@@ -79,19 +75,19 @@ internal sealed class Registers
             flags &= (ushort)~flag;
         }
 
-        SetRegisterWord(Constants.RegisterTargets.F, flags);
+        SetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word, flags);
 
         // Special handling of IFF2 for interrupts
         if (flag == Constants.FlagMasks.EnableInterrupts)
         {
-            SetRegisterByte(Constants.RegisterTargets.IFF2, (byte)(value ? 1 : 0), false);
+            SetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte, (byte)(value ? 1 : 0));
         }
     }
 
     // Used in RETN to restore interrupt enabled state
     public void RestoreIFF1()
     {
-        byte iff2 = GetRegisterByte(Constants.RegisterTargets.IFF2, false);
+        uint iff2 = GetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte);
         SetFlag(Constants.FlagMasks.EnableInterrupts, iff2 != 0);
     }
 
@@ -104,14 +100,14 @@ internal sealed class Registers
     {
         var sb = new StringBuilder();
 
-        sb.Append($"AF: {GetRegisterDWord(Constants.RegisterTargets.AF):X8} ");
-        sb.Append($"BC: {GetRegisterDWord(Constants.RegisterTargets.BC):X8} ");
-        sb.Append($"DE: {GetRegisterDWord(Constants.RegisterTargets.DE):X8} ");
-        sb.Append($"HL: {GetRegisterDWord(Constants.RegisterTargets.HL):X8} ");
-        sb.Append($"IX: {GetRegisterDWord(Constants.RegisterTargets.IX):X8} ");
-        sb.Append($"IY: {GetRegisterDWord(Constants.RegisterTargets.IY):X8} ");
-        sb.Append($"SP: {GetRegisterDWord(Constants.RegisterTargets.SP):X8} ");
-        sb.Append($"PC: {GetRegisterDWord(Constants.RegisterTargets.PC):X8} ");
+        sb.Append($"AF: {GetRegister(Constants.RegisterTargets.AF, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"BC: {GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"DE: {GetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"HL: {GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"IX: {GetRegister(Constants.RegisterTargets.IX, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"IY: {GetRegister(Constants.RegisterTargets.IY, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"SP: {GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"PC: {GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord):X8} ");
 
         return sb.ToString();
     }
@@ -120,13 +116,13 @@ internal sealed class Registers
     {
         var sb = new StringBuilder();
 
-        sb.Append($"AF': {GetRegisterDWord(Constants.RegisterTargets.AF_):X8} ");
-        sb.Append($"BC': {GetRegisterDWord(Constants.RegisterTargets.BC_):X8} ");
-        sb.Append($"DE': {GetRegisterDWord(Constants.RegisterTargets.DE_):X8} ");
-        sb.Append($"HL': {GetRegisterDWord(Constants.RegisterTargets.HL_):X8} ");
-        sb.Append($"IX': {GetRegisterDWord(Constants.RegisterTargets.IX_):X8} ");
-        sb.Append($"IY': {GetRegisterDWord(Constants.RegisterTargets.IY_):X8} ");
-        sb.Append($"SP': {GetRegisterDWord(Constants.RegisterTargets.SP_):X8} ");
+        sb.Append($"AF': {GetRegister(Constants.RegisterTargets.AF_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"BC': {GetRegister(Constants.RegisterTargets.BC_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"DE': {GetRegister(Constants.RegisterTargets.DE_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"HL': {GetRegister(Constants.RegisterTargets.HL_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"IX': {GetRegister(Constants.RegisterTargets.IX_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"IY': {GetRegister(Constants.RegisterTargets.IY_, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"SP': {GetRegister(Constants.RegisterTargets.SP_, Constants.OperandSize.DWord):X8} ");
 
         return sb.ToString();
     }
@@ -135,8 +131,8 @@ internal sealed class Registers
     {
         var sb = new StringBuilder();
 
-        sb.Append($"I: {GetRegisterDWord(Constants.RegisterTargets.I):X8} ");
-        sb.Append($"R: {GetRegisterWord(Constants.RegisterTargets.R):X4} ");
+        sb.Append($"I: {GetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord):X8} ");
+        sb.Append($"R: {GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word):X4} ");
 
         return sb.ToString();
     }
@@ -152,7 +148,7 @@ internal sealed class Registers
         sb.Append($"Z: {GetFlag(Constants.FlagMasks.Zero)} ");
         sb.Append($"S: {GetFlag(Constants.FlagMasks.Sign)} ");
         sb.Append($"IE: {GetFlag(Constants.FlagMasks.EnableInterrupts)} ");
-        sb.Append($"IFF2: {GetRegisterByte(Constants.RegisterTargets.IFF2, false) == 1} ");
+        sb.Append($"IFF2: {GetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte) == 1} ");
 
         return sb.ToString();
     }

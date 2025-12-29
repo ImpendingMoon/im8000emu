@@ -188,7 +188,7 @@ internal partial class CPU
         byte operand2Selector = (byte)(instructionWord >> 13);
         if (operand2Selector == 0b111)
         {
-            uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
+            uint immediateValue = ReadMemory(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
             decodedOperation.Operand2.Immediate = immediateValue;
             AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
         }
@@ -266,7 +266,7 @@ internal partial class CPU
         byte indirectOperandSelector = (byte)(instructionWord >> 13);
         if (indirectOperandSelector == 0b111)
         {
-            uint directAddress = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+            uint directAddress = ReadMemory(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
             indirectOperand.Immediate = directAddress;
             AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, directAddress);
         }
@@ -277,7 +277,7 @@ internal partial class CPU
             // IX, IY, SP always have a displacement. Displacements are always before immediate values.
             if (indirectOperand.Target >= Constants.RegisterTargets.IX)
             {
-                short displacement = (short)ReadMemoryWord(decodedOperation.BaseAddress);
+                short displacement = (short)ReadMemory(decodedOperation.BaseAddress, Constants.OperandSize.Word);
                 indirectOperand.Displacement = displacement;
                 AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Word, (uint)displacement);
             }
@@ -306,7 +306,7 @@ internal partial class CPU
                 throw new InvalidOperationException("0b111 is not a valid source target with direct addressing");
             }
 
-            uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + (uint)decodedOperation.Opcode.Count, decodedOperation.OperandSize);
+            uint immediateValue = ReadMemory(decodedOperation.BaseAddress + (uint)decodedOperation.Opcode.Count, decodedOperation.OperandSize);
             registerOperand.Immediate = immediateValue;
             AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
         }
@@ -448,7 +448,7 @@ internal partial class CPU
         byte operand1Selector = (byte)(instructionWord >> 13);
         if (operand1Selector == 0b111)
         {
-            uint directAddress = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+            uint directAddress = ReadMemory(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
             decodedOperation.Operand1.Immediate = directAddress;
             AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, directAddress);
         }
@@ -458,7 +458,7 @@ internal partial class CPU
             // IX, IY, SP always have a displacement.
             if (decodedOperation.Operand1.Target >= Constants.RegisterTargets.IX)
             {
-                short displacement = (short)ReadMemoryWord(decodedOperation.BaseAddress);
+                short displacement = (short)ReadMemory(decodedOperation.BaseAddress, Constants.OperandSize.Word);
                 decodedOperation.Operand1.Displacement = displacement;
                 AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Word, (uint)displacement);
             }
@@ -523,7 +523,7 @@ internal partial class CPU
         byte operand1Selector = (byte)(instructionWord >> 13);
         if (operand1Selector == 0b111)
         {
-            uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
+            uint immediateValue = ReadMemory(decodedOperation.BaseAddress + 2, decodedOperation.OperandSize);
             decodedOperation.Operand1.Immediate = immediateValue;
             AddValueToOpcode(decodedOperation.Opcode, decodedOperation.OperandSize, immediateValue);
         }
@@ -632,7 +632,7 @@ internal partial class CPU
                         Indirect = false,
                         Displacement = null
                     };
-                    uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.Byte);
+                    uint immediateValue = ReadMemory(decodedOperation.BaseAddress + 2, Constants.OperandSize.Byte);
                     decodedOperation.Operand1.Immediate = immediateValue;
                     AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Byte, immediateValue);
                 }
@@ -677,7 +677,7 @@ internal partial class CPU
                         Indirect = false,
                         Displacement = null
                     };
-                    uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
+                    uint immediateValue = ReadMemory(decodedOperation.BaseAddress + 2, Constants.OperandSize.DWord);
                     decodedOperation.Operand1.Immediate = immediateValue;
                     AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.DWord, immediateValue);
                 }
@@ -771,7 +771,7 @@ internal partial class CPU
                 Displacement = null
             };
 
-            uint immediateValue = ReadImmediateValue(decodedOperation.BaseAddress + 1, Constants.OperandSize.Byte);
+            uint immediateValue = ReadMemory(decodedOperation.BaseAddress + 1, Constants.OperandSize.Byte);
             decodedOperation.Operand1.Immediate = immediateValue;
             AddValueToOpcode(decodedOperation.Opcode, Constants.OperandSize.Byte, immediateValue);
         }

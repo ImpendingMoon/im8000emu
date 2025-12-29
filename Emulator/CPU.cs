@@ -114,8 +114,8 @@ internal partial class CPU
     {
         Registers.ClearRegisters();
         // Read reset vector
-        uint resetVector = ReadMemoryDWord(0x00000000);
-        Registers.SetRegisterDWord(Constants.RegisterTargets.PC, resetVector);
+        uint resetVector = ReadMemory(0x00000000, Constants.OperandSize.DWord);
+        Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, resetVector);
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ internal partial class CPU
         // Else if HALT state, return HALT operation
 
         // Else decode the operation at the current PC
-        uint pc = Registers.GetRegisterDWord(Constants.RegisterTargets.PC);
+        uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
         // Overload defined in CPUDecode.cs
         return Decode(pc);
     }
@@ -140,9 +140,9 @@ internal partial class CPU
     public int Execute(DecodedOperation instruction)
     {
         // Advance PC
-        uint pc = Registers.GetRegisterDWord(Constants.RegisterTargets.PC);
+        uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
         pc += (uint)instruction.Opcode.Count;
-        Registers.SetRegisterDWord(Constants.RegisterTargets.PC, pc);
+        Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 
         int cycles = _operationExecutors[instruction.Operation](instruction);
         return cycles;
