@@ -27,14 +27,39 @@ internal partial class CPU
 
     private int Execute_LD(DecodedOperation operation)
     {
-        // Load operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for LD operation
+        int cycles = operation.FetchCycles + 1;
+
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("LD requires two operands");
+        }
+
+        (uint value, int readCycles) = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += readCycles;
+
+        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+
+        return cycles;
     }
 
     private int Execute_EX(DecodedOperation operation)
     {
-        // Exchange operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EX operation
+        int cycles = operation.FetchCycles + 1;
+
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("EX requires two operands");
+        }
+
+        (uint value1, int readCycles1) = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += readCycles1;
+        (uint value2, int readCycles2) = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += readCycles2;
+
+        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value2);
+        cycles += WritebackOperand(operation.Operand2, operation.OperandSize, value1);
+
+        return cycles;
     }
 
     private int Execute_EX_Alt(DecodedOperation operation)
@@ -520,5 +545,143 @@ internal partial class CPU
     {
         // Load R into A operation logic would go here
         return operation.FetchCycles + 1; // Example cycle count for LD_A_R operation
+    }
+
+    private (uint value, int cycles) GetOperandValue(Operand operand, Constants.OperandSize size)
+    {
+        if (operand.Target is null && operand.Immediate is null)
+        {
+            throw new ArgumentException("Either Target or Immediate must have a value");
+        }
+
+        uint value = 0;
+        int cycles = 0;
+
+        if (operand.Indirect)
+        {
+            uint address = GetEffectiveAddress(operand);
+
+            value = size switch
+            {
+                Constants.OperandSize.Byte => ReadMemoryByte(address),
+                Constants.OperandSize.Word => ReadMemoryWord(address),
+                Constants.OperandSize.DWord => ReadMemoryDWord(address),
+                _ => throw new ArgumentException($"{size} is not a valid operand size")
+            };
+
+            cycles = GetMemoryCycles(address, size);
+        }
+        else
+        {
+            if (operand.Target is not null)
+            {
+                value = size switch
+                {
+                    Constants.OperandSize.Byte => Registers.GetRegisterByte(operand.Target.Value, false),
+                    Constants.OperandSize.Word => Registers.GetRegisterWord(operand.Target.Value),
+                    Constants.OperandSize.DWord => Registers.GetRegisterDWord(operand.Target.Value),
+                    _ => throw new ArgumentException($"{size} is not a valid operand size")
+                };
+            }
+            else if (operand.Immediate is not null)
+            {
+                value = operand.Immediate.Value;
+            }
+        }
+
+        return (value, cycles);
+    }
+
+    private int WritebackOperand(Operand operand, Constants.OperandSize size, uint value)
+    {
+        if (operand.Target is null && operand.Immediate is null)
+        {
+            throw new ArgumentException("Either Target or Immediate must have a value");
+        }
+
+        int cycles = 0;
+
+        if (operand.Indirect)
+        {
+            uint address = GetEffectiveAddress(operand);
+
+            switch (size)
+            {
+                case Constants.OperandSize.Byte:
+                    WriteMemoryByte(address, (byte)value);
+                    break;
+                case Constants.OperandSize.Word:
+                    WriteMemoryWord(address, (ushort)value);
+                    break;
+                case Constants.OperandSize.DWord:
+                    WriteMemoryDWord(address, value);
+                    break;
+                default:
+                    throw new ArgumentException($"{size} is not a valid operand size");
+            }
+
+            cycles = GetMemoryCycles(address, size);
+        }
+        else
+        {
+            if (operand.Target is null)
+            {
+                throw new ArgumentException("Cannot writeback to an immediate operand");
+            }
+
+            switch (size)
+            {
+                case Constants.OperandSize.Byte:
+                    Registers.SetRegisterByte(operand.Target.Value, (byte)value, false);
+                    break;
+                case Constants.OperandSize.Word:
+                    Registers.SetRegisterWord(operand.Target.Value, (ushort)value);
+                    break;
+                case Constants.OperandSize.DWord:
+                    Registers.SetRegisterDWord(operand.Target.Value, value);
+                    break;
+            }
+        }
+
+        return cycles;
+    }
+
+    private uint GetEffectiveAddress(Operand operand)
+    {
+        uint address = 0;
+
+        if (operand.Target is null && operand.Immediate is null)
+        {
+            throw new ArgumentException("Either Target or Immediate must have a value");
+        }
+
+        if (operand.Target is not null)
+        {
+            address = Registers.GetRegisterDWord(operand.Target.Value);
+        }
+        else if (operand.Immediate is not null)
+        {
+            address = operand.Immediate.Value;
+        }
+
+        if (operand.Displacement is not null)
+        {
+            address = (uint)((int)address + operand.Displacement.Value);
+        }
+
+        return address;
+    }
+
+    private static int GetMemoryCycles(uint address, Constants.OperandSize size)
+    {
+        bool aligned = address % 2 == 0;
+
+        return size switch
+        {
+            Constants.OperandSize.Byte => 3,
+            Constants.OperandSize.Word => aligned ? 3 : 6,
+            Constants.OperandSize.DWord => aligned ? 6 : 9,
+            _ => throw new ArgumentException($"{size} is not a valid operand size")
+        };
     }
 }

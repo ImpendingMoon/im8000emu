@@ -159,6 +159,23 @@ internal partial class CPU
         return BitConverter.ToUInt32(data);
     }
 
+    private void WriteMemoryByte(uint address, byte value)
+    {
+        _memoryBus.WriteByte(address, value);
+    }
+
+    private void WriteMemoryWord(uint address, ushort value)
+    {
+        byte[] bytes = BitConverter.GetBytes(value);
+        _memoryBus.WriteByteArray(address, bytes);
+    }
+
+    private void WriteMemoryDWord(uint address, uint value)
+    {
+        byte[] bytes = BitConverter.GetBytes(value);
+        _memoryBus.WriteByteArray(address, bytes);
+    }
+
     private readonly MemoryBus _memoryBus;
     private readonly MemoryBus _ioBus;
 }
