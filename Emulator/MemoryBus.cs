@@ -4,54 +4,58 @@
     {
         public MemoryBus()
         {
+            Memory = new byte[65536];
+            var rng = new Random();
+
+            for (int i = 0; i < Memory.Length; i++)
+            {
+                // Fill memory with random data for testing purposes.
+                Memory[i] = (byte)rng.Next();
+            }
         }
 
-        public List<MemoryBusDeviceMapping> Devices { get; } = [];
+        // Naive memory array. See commit 8eb002a2 for more complete implementation.
+        // This is just enough to test the CPU implementation.
+        public byte[] Memory { get; }
 
         public byte ReadByte(uint address)
         {
-            foreach (var mapping in Devices)
+            if (address >= Memory.Length)
             {
-                if (mapping.ContainsAddress(address))
-                {
-                    return mapping.Device.ReadByte(address - mapping.StartAddress);
-                }
+                throw new ArgumentOutOfRangeException(nameof(address), "Address is out of bounds.");
             }
-            return 0;
+
+            return Memory[(int)address];
         }
 
         public void WriteByte(uint address, byte value)
         {
-            foreach (var mapping in Devices)
+            if (address >= Memory.Length)
             {
-                if (mapping.ContainsAddress(address) && !mapping.ReadOnly)
-                {
-                    mapping.Device.WriteByte(address - mapping.StartAddress, value);
-                    return;
-                }
+                throw new ArgumentOutOfRangeException(nameof(address), "Address is out of bounds.");
             }
+
+            Memory[(int)address] = value;
         }
 
-        public Span<byte> ReadByteArray(uint address, int length)
+        public Span<byte> ReadByteArray(uint address, uint length)
         {
-            for (int i = 0; i < length; i++)
+            if (address + length > Memory.Length)
             {
-                ReadByte(address + (uint)i);
+                throw new ArgumentOutOfRangeException(nameof(address), "Address range is out of bounds.");
             }
-            return new byte[length];
+
+            return Memory.AsSpan()[(int)address..(int)(address + length)];
         }
 
         public void WriteByteArray(uint address, Span<byte> data)
         {
-            for (int i = 0; i < data.Length; i++)
+            if (address + data.Length > Memory.Length)
             {
-                WriteByte(address + (uint)i, data[i]);
+                throw new ArgumentOutOfRangeException(nameof(address), "Address range is out of bounds.");
             }
-        }
 
-        public void AttachDevice(MemoryBusDeviceMapping deviceMapping)
-        {
-            Devices.Add(deviceMapping);
+            data.CopyTo(Memory.AsSpan()[(int)address..(int)(address + data.Length)]);
         }
     }
 }
