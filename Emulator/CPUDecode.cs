@@ -2,6 +2,7 @@
 
 namespace im8000emu.Emulator;
 
+// Implements instruction decoding logic
 internal partial class CPU
 {
     /// <summary>
@@ -834,56 +835,6 @@ internal partial class CPU
             0b0111 => Constants.Condition.M,
             0b1111 => Constants.Condition.Unconditional,
             _ => throw new ArgumentException($"0b{selector:B4} is not a valid condition selector"),
-        };
-    }
-
-    private uint ReadImmediateValue(uint address, Constants.OperandSize size)
-    {
-        return size switch
-        {
-            Constants.OperandSize.Byte => ReadMemoryByte(address),
-            Constants.OperandSize.Word => ReadMemoryWord(address),
-            Constants.OperandSize.DWord => ReadMemoryDWord(address),
-            _ => throw new ArgumentException($"{size} is not a valid operand size"),
-        };
-    }
-
-    private static void AddValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint value)
-    {
-        byte[] immediateBytes = BitConverter.GetBytes(value);
-
-        switch (size)
-        {
-            case Constants.OperandSize.Byte:
-            {
-                opcode.Add(immediateBytes[0]);
-                break;
-            }
-
-            case Constants.OperandSize.Word:
-            {
-                opcode.AddRange(immediateBytes[0..2]);
-                break;
-            }
-
-            case Constants.OperandSize.DWord:
-            {
-                opcode.AddRange(immediateBytes);
-                break;
-            }
-
-            default: throw new ArgumentException($"{size} is not a valid operand size");
-        }
-    }
-
-    private static string GetOperationString(Constants.Operation operation, Constants.OperandSize size)
-    {
-        return size switch
-        {
-            Constants.OperandSize.Byte => $"{operation}.B",
-            Constants.OperandSize.Word => $"{operation}.W",
-            Constants.OperandSize.DWord => $"{operation}.D",
-            _ => throw new ArgumentException($"{size} is not a valid operand size"),
         };
     }
 }

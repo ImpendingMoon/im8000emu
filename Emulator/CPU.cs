@@ -1,5 +1,11 @@
 ﻿namespace im8000emu.Emulator;
 
+// This class is split into CPU.cs, CPUDecode.cs, CPUExecute.cs, and CPUShared.cs
+// It is a beast of a class with several thousand LOC, which is expected for an emulator core
+//
+// I need to refactor some data flow stuff, and we *need* to get better exceptions and disassembly for debugging.
+// Read/WriteMemory should own cycle calculation, and use a named struct instead of tuple.
+// Disassembly is tolerable, but doesn't match 1:1 with assembler, and has nonsense like JR_s8.B -12
 internal partial class CPU
 {
     private Dictionary<Constants.Operation, Func<DecodedOperation, int>> _operationExecutors;
@@ -141,41 +147,4 @@ internal partial class CPU
         int cycles = _operationExecutors[instruction.Operation](instruction);
         return cycles;
     }
-
-    private byte ReadMemoryByte(uint address)
-    {
-        return _memoryBus.ReadByte(address);
-    }
-
-    private ushort ReadMemoryWord(uint address)
-    {
-        Span<byte> data = _memoryBus.ReadByteArray(address, 2);
-        return BitConverter.ToUInt16(data);
-    }
-
-    private uint ReadMemoryDWord(uint address)
-    {
-        Span<byte> data = _memoryBus.ReadByteArray(address, 4);
-        return BitConverter.ToUInt32(data);
-    }
-
-    private void WriteMemoryByte(uint address, byte value)
-    {
-        _memoryBus.WriteByte(address, value);
-    }
-
-    private void WriteMemoryWord(uint address, ushort value)
-    {
-        byte[] bytes = BitConverter.GetBytes(value);
-        _memoryBus.WriteByteArray(address, bytes);
-    }
-
-    private void WriteMemoryDWord(uint address, uint value)
-    {
-        byte[] bytes = BitConverter.GetBytes(value);
-        _memoryBus.WriteByteArray(address, bytes);
-    }
-
-    private readonly MemoryBus _memoryBus;
-    private readonly MemoryBus _ioBus;
 }

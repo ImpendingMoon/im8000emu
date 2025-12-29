@@ -17,6 +17,31 @@ internal static class Constants
         IFF2,
     }
 
+    public static readonly Dictionary<RegisterTargets, RegisterTargets> RegisterToAlternate = new()
+    {
+        { RegisterTargets.A, RegisterTargets.A_ },
+        { RegisterTargets.F, RegisterTargets.F_ },
+        { RegisterTargets.B, RegisterTargets.B_ },
+        { RegisterTargets.C, RegisterTargets.C_ },
+        { RegisterTargets.D, RegisterTargets.D_ },
+        { RegisterTargets.E, RegisterTargets.E_ },
+        { RegisterTargets.H, RegisterTargets.H_ },
+        { RegisterTargets.L, RegisterTargets.L_ },
+        { RegisterTargets.IXL, RegisterTargets.IXL_ },
+        { RegisterTargets.IXH, RegisterTargets.IXH_ },
+        { RegisterTargets.IYL, RegisterTargets.IYL_ },
+        { RegisterTargets.IYH, RegisterTargets.IYH_ },
+        { RegisterTargets.SPL, RegisterTargets.SPL_ },
+        { RegisterTargets.SPH, RegisterTargets.SPH_ },
+        { RegisterTargets.AF, RegisterTargets.AF_ },
+        { RegisterTargets.BC, RegisterTargets.BC_ },
+        { RegisterTargets.DE, RegisterTargets.DE_ },
+        { RegisterTargets.HL, RegisterTargets.HL_ },
+        { RegisterTargets.IX, RegisterTargets.IX_ },
+        { RegisterTargets.IY, RegisterTargets.IY_ },
+        { RegisterTargets.SP, RegisterTargets.SP_ },
+    };
+
     public enum OperandSize
     {
         Byte,

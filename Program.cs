@@ -1,6 +1,4 @@
-﻿using im8000emu.Emulator;
-
-namespace im8000emu;
+﻿namespace im8000emu;
 
 internal class Program
 {
@@ -14,11 +12,11 @@ internal class Program
         //cpu.Reset();
 
         // Example: Run a loop of whatever is in memory
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 1000; i++)
         {
             try
             {
-                DecodedOperation operation = cpu.Decode();
+                Emulator.DecodedOperation operation = cpu.Decode();
 
                 Console.WriteLine($"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString} at address 0x{cpu.Registers.GetRegisterDWord(Emulator.Constants.RegisterTargets.PC):X8}");
 

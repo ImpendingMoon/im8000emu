@@ -1,5 +1,6 @@
 ﻿namespace im8000emu.Emulator;
 
+// Implements methods to execute each operation
 internal partial class CPU
 {
     private int Execute_None(DecodedOperation operation)
@@ -68,24 +69,54 @@ internal partial class CPU
     // Exchange with Alternate
     private int Execute_EX_Alt(DecodedOperation operation)
     {
-        // TODO: Write helper method for RegisterTarget->Alternate RegisterTarget
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("EX_Alt requires one operand");
+        }
 
-        // Exchange alternate registers logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EX_Alt operation
+        if (operation.Operand1.Target is null || operation.Operand1.Indirect)
+        {
+            throw new ArgumentException("EX_Alt can only operate on register targets");
+        }
+
+        if (operation.OperandSize == Constants.OperandSize.Byte)
+        {
+            throw new ArgumentException("EX_Alt cannot be used with byte operands");
+        }
+
+        ExchangeWithAlternate(operation.Operand1.Target.Value, operation.OperandSize);
+
+        return operation.FetchCycles + 1;
     }
 
     // Exchange Primary with Alternate
     private int Execute_EXX(DecodedOperation operation)
     {
-        // Exchange primary registers logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EXX operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("EXX requires no operands");
+        }
+
+        ExchangeWithAlternate(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
+        ExchangeWithAlternate(Constants.RegisterTargets.DE, Constants.OperandSize.DWord);
+        ExchangeWithAlternate(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        return operation.FetchCycles + 1;
     }
 
     // Exchange Index with Alternate
     private int Execute_EXI(DecodedOperation operation)
     {
-        // Exchange index registers logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EXI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("EXI requires no operands");
+        }
+
+        ExchangeWithAlternate(Constants.RegisterTargets.IX, Constants.OperandSize.DWord);
+        ExchangeWithAlternate(Constants.RegisterTargets.IY, Constants.OperandSize.DWord);
+        ExchangeWithAlternate(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+
+        return operation.FetchCycles + 1;
     }
 
     // Exchange Halves
@@ -653,141 +684,4 @@ internal partial class CPU
         return operation.FetchCycles + 1; // Example cycle count for LD_A_R operation
     }
 
-    private (uint value, int cycles) GetOperandValue(Operand operand, Constants.OperandSize size)
-    {
-        if (operand.Target is null && operand.Immediate is null)
-        {
-            throw new ArgumentException("Either Target or Immediate must have a value");
-        }
-
-        uint value = 0;
-        int cycles = 0;
-
-        if (operand.Indirect)
-        {
-            uint address = GetEffectiveAddress(operand);
-
-            value = size switch
-            {
-                Constants.OperandSize.Byte => ReadMemoryByte(address),
-                Constants.OperandSize.Word => ReadMemoryWord(address),
-                Constants.OperandSize.DWord => ReadMemoryDWord(address),
-                _ => throw new ArgumentException($"{size} is not a valid operand size")
-            };
-
-            cycles = GetMemoryCycles(address, size);
-        }
-        else
-        {
-            if (operand.Target is not null)
-            {
-                value = size switch
-                {
-                    Constants.OperandSize.Byte => Registers.GetRegisterByte(operand.Target.Value, false),
-                    Constants.OperandSize.Word => Registers.GetRegisterWord(operand.Target.Value),
-                    Constants.OperandSize.DWord => Registers.GetRegisterDWord(operand.Target.Value),
-                    _ => throw new ArgumentException($"{size} is not a valid operand size")
-                };
-            }
-            else if (operand.Immediate is not null)
-            {
-                value = operand.Immediate.Value;
-            }
-        }
-
-        return (value, cycles);
-    }
-
-    private int WritebackOperand(Operand operand, Constants.OperandSize size, uint value)
-    {
-        if (operand.Target is null && operand.Immediate is null)
-        {
-            throw new ArgumentException("Either Target or Immediate must have a value");
-        }
-
-        int cycles = 0;
-
-        if (operand.Indirect)
-        {
-            uint address = GetEffectiveAddress(operand);
-
-            switch (size)
-            {
-                case Constants.OperandSize.Byte:
-                    WriteMemoryByte(address, (byte)value);
-                    break;
-                case Constants.OperandSize.Word:
-                    WriteMemoryWord(address, (ushort)value);
-                    break;
-                case Constants.OperandSize.DWord:
-                    WriteMemoryDWord(address, value);
-                    break;
-                default:
-                    throw new ArgumentException($"{size} is not a valid operand size");
-            }
-
-            cycles = GetMemoryCycles(address, size);
-        }
-        else
-        {
-            if (operand.Target is null)
-            {
-                throw new ArgumentException("Cannot writeback to an immediate operand");
-            }
-
-            switch (size)
-            {
-                case Constants.OperandSize.Byte:
-                    Registers.SetRegisterByte(operand.Target.Value, (byte)value, false);
-                    break;
-                case Constants.OperandSize.Word:
-                    Registers.SetRegisterWord(operand.Target.Value, (ushort)value);
-                    break;
-                case Constants.OperandSize.DWord:
-                    Registers.SetRegisterDWord(operand.Target.Value, value);
-                    break;
-            }
-        }
-
-        return cycles;
-    }
-
-    private uint GetEffectiveAddress(Operand operand)
-    {
-        uint address = 0;
-
-        if (operand.Target is null && operand.Immediate is null)
-        {
-            throw new ArgumentException("Either Target or Immediate must have a value");
-        }
-
-        if (operand.Target is not null)
-        {
-            address = Registers.GetRegisterDWord(operand.Target.Value);
-        }
-        else if (operand.Immediate is not null)
-        {
-            address = operand.Immediate.Value;
-        }
-
-        if (operand.Displacement is not null)
-        {
-            address = (uint)((int)address + operand.Displacement.Value);
-        }
-
-        return address;
-    }
-
-    private static int GetMemoryCycles(uint address, Constants.OperandSize size)
-    {
-        bool aligned = address % 2 == 0;
-
-        return size switch
-        {
-            Constants.OperandSize.Byte => 3,
-            Constants.OperandSize.Word => aligned ? 3 : 6,
-            Constants.OperandSize.DWord => aligned ? 6 : 9,
-            _ => throw new ArgumentException($"{size} is not a valid operand size")
-        };
-    }
 }
