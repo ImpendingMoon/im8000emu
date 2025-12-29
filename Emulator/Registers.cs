@@ -1,4 +1,6 @@
-﻿namespace im8000emu.Emulator;
+﻿using System.Text;
+
+namespace im8000emu.Emulator;
 
 // The IM8000 uses Z80-like registers, but double the width (16/32-bit instead of 8/16-bit).
 internal sealed class Registers
@@ -96,6 +98,84 @@ internal sealed class Registers
     public void ClearRegisters()
     {
         Array.Clear(_registerData);
+    }
+
+    public string GetStandardDisplayString()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append($"AF: {GetRegisterDWord(Constants.RegisterTargets.AF):X8} ");
+        sb.Append($"BC: {GetRegisterDWord(Constants.RegisterTargets.BC):X8} ");
+        sb.Append($"DE: {GetRegisterDWord(Constants.RegisterTargets.DE):X8} ");
+        sb.Append($"HL: {GetRegisterDWord(Constants.RegisterTargets.HL):X8} ");
+        sb.Append($"IX: {GetRegisterDWord(Constants.RegisterTargets.IX):X8} ");
+        sb.Append($"IY: {GetRegisterDWord(Constants.RegisterTargets.IY):X8} ");
+        sb.Append($"SP: {GetRegisterDWord(Constants.RegisterTargets.SP):X8} ");
+        sb.Append($"PC: {GetRegisterDWord(Constants.RegisterTargets.PC):X8} ");
+
+        return sb.ToString();
+    }
+
+    public string GetAlternateDisplayString()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append($"AF': {GetRegisterDWord(Constants.RegisterTargets.AF_):X8} ");
+        sb.Append($"BC': {GetRegisterDWord(Constants.RegisterTargets.BC_):X8} ");
+        sb.Append($"DE': {GetRegisterDWord(Constants.RegisterTargets.DE_):X8} ");
+        sb.Append($"HL': {GetRegisterDWord(Constants.RegisterTargets.HL_):X8} ");
+        sb.Append($"IX': {GetRegisterDWord(Constants.RegisterTargets.IX_):X8} ");
+        sb.Append($"IY': {GetRegisterDWord(Constants.RegisterTargets.IY_):X8} ");
+        sb.Append($"SP': {GetRegisterDWord(Constants.RegisterTargets.SP_):X8} ");
+
+        return sb.ToString();
+    }
+
+    public string GetSystemDisplayString()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append($"I: {GetRegisterDWord(Constants.RegisterTargets.I):X8} ");
+        sb.Append($"R: {GetRegisterWord(Constants.RegisterTargets.R):X4} ");
+
+        return sb.ToString();
+    }
+
+    public string GetFlagsDisplayString()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append($"C: {GetFlag(Constants.FlagMasks.Carry)} ");
+        sb.Append($"N: {GetFlag(Constants.FlagMasks.Negative)} ");
+        sb.Append($"PV: {GetFlag(Constants.FlagMasks.ParityOverflow)} ");
+        sb.Append($"H: {GetFlag(Constants.FlagMasks.HalfCarry)} ");
+        sb.Append($"Z: {GetFlag(Constants.FlagMasks.Zero)} ");
+        sb.Append($"S: {GetFlag(Constants.FlagMasks.Sign)} ");
+        sb.Append($"IE: {GetFlag(Constants.FlagMasks.EnableInterrupts)} ");
+        sb.Append($"IFF2: {GetRegisterByte(Constants.RegisterTargets.IFF2, false) == 1} ");
+
+        return sb.ToString();
+    }
+
+    public string GetFullDisplayString()
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("Registers:");
+        sb.AppendLine(GetStandardDisplayString());
+        sb.AppendLine("Alternate Registers:");
+        sb.AppendLine(GetAlternateDisplayString());
+        sb.AppendLine("System Registers:");
+        sb.AppendLine(GetSystemDisplayString());
+        sb.AppendLine("Flags:");
+        sb.AppendLine(GetFlagsDisplayString());
+
+        return sb.ToString();
+    }
+
+    public override string ToString()
+    {
+        return GetStandardDisplayString();
     }
 
     // 14 32-bit registers + 32-bit PC + 32-bit I + 16-bit R + boolean IFF2 = 67 bytes

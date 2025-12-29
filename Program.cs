@@ -11,7 +11,7 @@ internal class Program
 
         var cpu = new Emulator.CPU(memoryBus, ioBus);
 
-        cpu.Reset();
+        //cpu.Reset();
 
         // Example: Run a loop of whatever is in memory
         for (int i = 0; i < 100; i++)
@@ -24,6 +24,8 @@ internal class Program
 
                 int cycles = cpu.Execute(operation);
                 Console.WriteLine($"T-cycles taken: {cycles}");
+
+                Console.WriteLine(cpu.Registers.GetFullDisplayString());
             }
             catch (Exception ex)
             {
@@ -34,6 +36,8 @@ internal class Program
                 pc += 2;
                 cpu.Registers.SetRegisterDWord(Emulator.Constants.RegisterTargets.PC, pc);
             }
+
+            Console.WriteLine();
         }
     }
 }
