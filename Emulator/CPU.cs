@@ -141,13 +141,13 @@ internal partial class CPU
 
     private ushort ReadMemoryWord(uint address)
     {
-        var data = _memoryBus.ReadByteArray(address, 2);
+        Span<byte> data = _memoryBus.ReadByteArray(address, 2);
         return BitConverter.ToUInt16(data);
     }
 
     private uint ReadMemoryDWord(uint address)
     {
-        var data = _memoryBus.ReadByteArray(address, 4);
+        Span<byte> data = _memoryBus.ReadByteArray(address, 4);
         return BitConverter.ToUInt32(data);
     }
 
