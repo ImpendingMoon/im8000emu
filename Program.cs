@@ -27,7 +27,7 @@ internal class Program
             }
             catch (Exception ex)
             {
-                //Console.WriteLine($"Exception during execution: {ex.Message}");
+                Console.WriteLine($"Exception during execution: {ex.Message}");
 
                 // Advance PC to avoid infinite loop.
                 uint pc = cpu.Registers.GetRegister(Emulator.Constants.RegisterTargets.PC, Emulator.Constants.OperandSize.DWord);

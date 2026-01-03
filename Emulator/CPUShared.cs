@@ -6,26 +6,35 @@ internal partial class CPU
     private readonly MemoryBus _memoryBus;
     private readonly MemoryBus _ioBus;
 
-    // TODO: Refactor to ReadMemory(uint address, Constants.OperandSize size)
-    private uint ReadMemory(uint address, Constants.OperandSize size)
+    private MemoryResult ReadMemory(uint address, Constants.OperandSize size)
     {
+        var result = new MemoryResult();
+
+        bool aligned = address % 2 == 0;
+
         switch (size)
         {
             case Constants.OperandSize.Byte:
             {
-                return _memoryBus.ReadByte(address);
+                result.Value = _memoryBus.ReadByte(address);
+                result.Cycles = 3;
+                break;
             }
 
             case Constants.OperandSize.Word:
             {
                 Span<byte> data = _memoryBus.ReadByteArray(address, 2);
-                return BitConverter.ToUInt16(data);
+                result.Value = BitConverter.ToUInt16(data);
+                result.Cycles = aligned ? 3 : 6;
+                break;
             }
 
             case Constants.OperandSize.DWord:
             {
                 Span<byte> data = _memoryBus.ReadByteArray(address, 4);
-                return BitConverter.ToUInt32(data);
+                result.Value = BitConverter.ToUInt32(data);
+                result.Cycles = aligned ? 6 : 9;
+                break;
             }
 
             default:
@@ -33,15 +42,25 @@ internal partial class CPU
                 throw new ArgumentException($"ReadMemory is not implemented for OperandSize {size}");
             }
         }
+
+        return result;
     }
 
-    private void WriteMemory(uint address, Constants.OperandSize size, uint value)
+    private MemoryResult WriteMemory(uint address, Constants.OperandSize size, uint value)
     {
+        var result = new MemoryResult()
+        {
+            Value = 0
+        };
+
+        bool aligned = address % 2 == 0;
+
         switch (size)
         {
             case Constants.OperandSize.Byte:
             {
                 _memoryBus.WriteByte(address, (byte)value);
+                result.Cycles = 3;
                 break;
             }
 
@@ -49,6 +68,7 @@ internal partial class CPU
             {
                 byte[] bytes = BitConverter.GetBytes(value);
                 _memoryBus.WriteByteArray(address, bytes);
+                result.Cycles = aligned ? 3 : 6;
                 break;
             }
 
@@ -56,6 +76,7 @@ internal partial class CPU
             {
                 byte[] bytes = BitConverter.GetBytes(value);
                 _memoryBus.WriteByteArray(address, bytes);
+                result.Cycles = aligned ? 6 : 9;
                 break;
             }
 
@@ -64,53 +85,54 @@ internal partial class CPU
                 throw new ArgumentException($"WriteMemory is not implemented for OperandSize {size}");
             }
         }
+
+        return result;
     }
 
-    private (uint value, int cycles) GetOperandValue(Operand operand, Constants.OperandSize size)
+    private MemoryResult GetOperandValue(Operand operand, Constants.OperandSize size)
     {
         if (operand.Target is null && operand.Immediate is null)
         {
             throw new ArgumentException("Either Target or Immediate must have a value");
         }
 
-        uint value = 0;
-        int cycles = 0;
+        var result = new MemoryResult();
 
         if (operand.Indirect)
         {
             uint address = GetEffectiveAddress(operand);
-            value = ReadMemory(address, size);
-            cycles = GetMemoryCycles(address, size);
+            result = ReadMemory(address, size);
         }
         else
         {
             if (operand.Target is not null)
             {
-                value = Registers.GetRegister(operand.Target.Value, size);
+                result.Value = Registers.GetRegister(operand.Target.Value, size);
             }
             else if (operand.Immediate is not null)
             {
-                value = operand.Immediate.Value;
+                result.Value = operand.Immediate.Value;
             }
+
+            result.Cycles = 0;
         }
 
-        return (value, cycles);
+        return result;
     }
 
-    private int WritebackOperand(Operand operand, Constants.OperandSize size, uint value)
+    private MemoryResult WritebackOperand(Operand operand, Constants.OperandSize size, uint value)
     {
         if (operand.Target is null && operand.Immediate is null)
         {
             throw new ArgumentException("Either Target or Immediate must have a value");
         }
 
-        int cycles = 0;
+        var result = new MemoryResult();
 
         if (operand.Indirect)
         {
             uint address = GetEffectiveAddress(operand);
-            WriteMemory(address, size, value);
-            cycles = GetMemoryCycles(address, size);
+            result = WriteMemory(address, size, value);
         }
         else
         {
@@ -120,9 +142,10 @@ internal partial class CPU
             }
 
             Registers.SetRegister(operand.Target.Value, size, value);
+            result.Cycles = 0;
         }
 
-        return cycles;
+        return result;
     }
 
     private uint GetEffectiveAddress(Operand operand)
@@ -149,19 +172,6 @@ internal partial class CPU
         }
 
         return address;
-    }
-
-    private static int GetMemoryCycles(uint address, Constants.OperandSize size)
-    {
-        bool aligned = address % 2 == 0;
-
-        return size switch
-        {
-            Constants.OperandSize.Byte => 3,
-            Constants.OperandSize.Word => aligned ? 3 : 6,
-            Constants.OperandSize.DWord => aligned ? 6 : 9,
-            _ => throw new ArgumentException($"{size} is not a valid operand size")
-        };
     }
 
     private void ExchangeWithAlternate(Constants.RegisterTargets register, Constants.OperandSize size)
@@ -214,5 +224,11 @@ internal partial class CPU
             Constants.OperandSize.DWord => $"{operation}.D",
             _ => throw new ArgumentException($"{size} is not a valid operand size"),
         };
+    }
+
+    private struct MemoryResult
+    {
+        public uint Value;
+        public int Cycles;
     }
 }

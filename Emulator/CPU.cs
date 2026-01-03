@@ -114,7 +114,8 @@ internal partial class CPU
     {
         Registers.ClearRegisters();
         // Read reset vector
-        uint resetVector = ReadMemory(0x00000000, Constants.OperandSize.DWord);
+        MemoryResult memoryResult = ReadMemory(0x00000000, Constants.OperandSize.DWord);
+        uint resetVector = memoryResult.Value;
         Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, resetVector);
     }
 

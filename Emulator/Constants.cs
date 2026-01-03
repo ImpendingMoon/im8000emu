@@ -71,7 +71,7 @@ internal static class Constants
         PO,
         PE,
         P,
-        M,
+        N,
         Unconditional,
     }
 

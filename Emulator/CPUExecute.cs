@@ -37,10 +37,11 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + 1;
 
-        (uint value, int readCycles) = GetOperandValue(operation.Operand2, operation.OperandSize);
-        cycles += readCycles;
+        MemoryResult operandRead = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operandRead.Cycles;
 
-        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, operandRead.Value);
+        cycles += operandWrite.Cycles;
 
         return cycles;
     }
@@ -55,13 +56,15 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + 1;
 
-        (uint value1, int readCycles1) = GetOperandValue(operation.Operand1, operation.OperandSize);
-        cycles += readCycles1;
-        (uint value2, int readCycles2) = GetOperandValue(operation.Operand2, operation.OperandSize);
-        cycles += readCycles2;
+        MemoryResult operandRead1 = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead1.Cycles;
+        MemoryResult operandRead2 = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operandRead2.Cycles;
 
-        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value2);
-        cycles += WritebackOperand(operation.Operand2, operation.OperandSize, value1);
+        MemoryResult operandWrite1 = WritebackOperand(operation.Operand1, operation.OperandSize, operandRead2.Value);
+        cycles += operandWrite1.Cycles;
+        MemoryResult operandWrite2 = WritebackOperand(operation.Operand2, operation.OperandSize, operandRead1.Value);
+        cycles += operandWrite2.Cycles;
 
         return cycles;
     }
@@ -129,8 +132,10 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + 1;
 
-        (uint value, int readCycles) = GetOperandValue(operation.Operand1, operation.OperandSize);
-        cycles += readCycles;
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint value = operandRead.Value;
 
         switch (operation.OperandSize)
         {
@@ -157,7 +162,8 @@ internal partial class CPU
             }
         }
 
-        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        cycles += operandWrite.Cycles;
 
         return cycles;
     }
@@ -172,10 +178,13 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + 1;
 
-        (uint value, int readCycles) = GetOperandValue(operation.Operand1, operation.OperandSize);
-        cycles += readCycles;
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint value = operandRead.Value;
 
         // PUSH sign extends into dwords
+        // ISA Design Note: Should we have this behavior? Or should we only support dword targets?
         if (operation.OperandSize == Constants.OperandSize.Byte)
         {
             value = Helpers.BitHelper.SignExtend(value, 8);
@@ -188,17 +197,14 @@ internal partial class CPU
         uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
         // Pre-decrement for PUSH
-        stackPointer -= 2;
+        stackPointer -= 4;
 
         // Write value to memory
-        WriteMemory(stackPointer, Constants.OperandSize.DWord, value);
+        MemoryResult operandWrite = WriteMemory(stackPointer, Constants.OperandSize.DWord, value);
+        cycles += operandWrite.Cycles;
 
         // Writeback SP
         Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
-
-        // Calculate cycles
-        bool aligned = stackPointer % 2 == 0;
-        cycles += aligned ? 6 : 9;
 
         return cycles;
     }
@@ -216,20 +222,21 @@ internal partial class CPU
         uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
         // Read value from memory
-        uint value = ReadMemory(stackPointer, Constants.OperandSize.Word);
+        MemoryResult operandRead = ReadMemory(stackPointer, Constants.OperandSize.DWord);
+        cycles += operandRead.Cycles;
+
+        uint value = operandRead.Value;
 
         // Write to destination
-        cycles += WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        // ISA Design Note: This is non-intuitive behavior. Reading dword and truncating to operand size.
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        cycles += operandWrite.Cycles;
 
         // Post-increment for POP
-        stackPointer += 2;
+        stackPointer += 4;
 
         // Writeback SP
         Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
-
-        // Calculate cycles
-        bool aligned = stackPointer % 2 == 0;
-        cycles += aligned ? 6 : 9;
 
         return cycles;
     }
