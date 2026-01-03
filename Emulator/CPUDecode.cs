@@ -807,12 +807,4 @@ internal partial class CPU
             _ => throw new ArgumentException($"0b{selector:B4} is not a valid condition selector"),
         };
     }
-
-    private uint FetchImmediate(DecodedOperation decodedOperation, Constants.OperandSize size)
-    {
-        MemoryResult immediateFetch = ReadMemory((uint)(decodedOperation.BaseAddress + decodedOperation.Opcode.Count), size);
-        decodedOperation.FetchCycles += immediateFetch.Cycles;
-        AddValueToOpcode(decodedOperation.Opcode, size, immediateFetch.Value);
-        return immediateFetch.Value;
-    }
 }

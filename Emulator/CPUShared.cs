@@ -187,6 +187,14 @@ internal partial class CPU
         Registers.SetRegister(register, Constants.OperandSize.Word, alternateValue);
     }
 
+    private uint FetchImmediate(DecodedOperation decodedOperation, Constants.OperandSize size)
+    {
+        MemoryResult immediateFetch = ReadMemory((uint)(decodedOperation.BaseAddress + decodedOperation.Opcode.Count), size);
+        decodedOperation.FetchCycles += immediateFetch.Cycles;
+        AddValueToOpcode(decodedOperation.Opcode, size, immediateFetch.Value);
+        return immediateFetch.Value;
+    }
+
     private static void AddValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint value)
     {
         byte[] immediateBytes = BitConverter.GetBytes(value);
@@ -223,6 +231,22 @@ internal partial class CPU
             Constants.OperandSize.Word => $"{operation}.W",
             Constants.OperandSize.DWord => $"{operation}.D",
             _ => throw new ArgumentException($"{size} is not a valid operand size"),
+        };
+    }
+
+    private bool IsConditionTrue(Constants.Condition condition)
+    {
+        return condition switch
+        {
+            Constants.Condition.NZ => !Registers.GetFlag(Constants.FlagMasks.Zero),
+            Constants.Condition.Z => Registers.GetFlag(Constants.FlagMasks.Zero),
+            Constants.Condition.NC => !Registers.GetFlag(Constants.FlagMasks.Carry),
+            Constants.Condition.C => Registers.GetFlag(Constants.FlagMasks.Carry),
+            Constants.Condition.PO => !Registers.GetFlag(Constants.FlagMasks.ParityOverflow),
+            Constants.Condition.PE => Registers.GetFlag(Constants.FlagMasks.ParityOverflow),
+            Constants.Condition.P => !Registers.GetFlag(Constants.FlagMasks.Sign),
+            Constants.Condition.N => Registers.GetFlag(Constants.FlagMasks.Sign),
+            _ => throw new ArgumentException($"IsConditionTrue is not implemented for condition {condition}")
         };
     }
 
