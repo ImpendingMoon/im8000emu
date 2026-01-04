@@ -373,28 +373,346 @@ internal partial class CPU
         return operation.FetchCycles + 1; // Example cycle count for OTDR operation
     }
 
+    // Add
     private int Execute_ADD(DecodedOperation operation)
     {
-        // Add operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for ADD operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("ADD requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillAdditionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += 1; // Needs to ripple through ALU twice
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a + b;
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_ADD is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Add with Carry
     private int Execute_ADC(DecodedOperation operation)
     {
-        // Add with Carry operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for ADC operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("ADC requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = (byte)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillAdditionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = (ushort)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += 1; // Needs to ripple through ALU twice
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = a + b;
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_ADC is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Subtract
     private int Execute_SUB(DecodedOperation operation)
     {
-        // Subtract operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SUB operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SUB requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += 1; // Needs to ripple through ALU twice
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a - b;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SUB is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Subtract with Carry
     private int Execute_SBC(DecodedOperation operation)
     {
-        // Subtract with Carry operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SBC operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SBC requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = (byte)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = (ushort)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += 1; // Needs to ripple through ALU twice
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+                if (Registers.GetFlag(Constants.FlagMasks.Carry)) { b++; }
+
+                result = a - b;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SBC is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_CP(DecodedOperation operation)
@@ -690,5 +1008,4 @@ internal partial class CPU
         // Load R into A operation logic would go here
         return operation.FetchCycles + 1; // Example cycle count for LD_A_R operation
     }
-
 }
