@@ -8,7 +8,7 @@ internal class BitHelper
         return (uint)(((int)value << shift) >> shift);
     }
 
-    public static bool IsParityEven(uint value)
+    public static int NumberOfOnes(uint value)
     {
         int count = 0;
         for (int i = 0; i < 32; i++)
@@ -18,7 +18,12 @@ internal class BitHelper
                 count++;
             }
         }
-        return (count % 2) == 0;
+        return count;
+    }
+
+    public static bool IsParityEven(uint value)
+    {
+        return (NumberOfOnes(value) % 2) == 0;
     }
 
     public static bool WillAdditionWrap(byte a, byte b)

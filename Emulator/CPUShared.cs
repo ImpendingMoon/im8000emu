@@ -264,6 +264,19 @@ internal partial class CPU
         Registers.SetFlag(Constants.FlagMasks.Sign, state.Sign);
     }
 
+    private ALUFlagState GetALUFlags()
+    {
+        return new ALUFlagState()
+        {
+            Carry = Registers.GetFlag(Constants.FlagMasks.Carry),
+            Negative = Registers.GetFlag(Constants.FlagMasks.Negative),
+            ParityOverflow = Registers.GetFlag(Constants.FlagMasks.ParityOverflow),
+            HalfCarry = Registers.GetFlag(Constants.FlagMasks.HalfCarry),
+            Zero = Registers.GetFlag(Constants.FlagMasks.Zero),
+            Sign = Registers.GetFlag(Constants.FlagMasks.Sign),
+        };
+    }
+
     private struct MemoryResult
     {
         public uint Value;

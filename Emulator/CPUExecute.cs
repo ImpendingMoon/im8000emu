@@ -793,52 +793,603 @@ internal partial class CPU
         return cycles;
     }
 
+    // Increment
     private int Execute_INC(DecodedOperation operation)
     {
-        // Increment operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for INC operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("INC requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operandRead.Value;
+                byte b = 1;
+                result = (byte)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillAdditionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operandRead.Value;
+                ushort b = 1;
+                result = (ushort)(a + b);
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operandRead.Value;
+                uint b = 1;
+                result = a + b;
+
+                flagState.Carry = Helpers.BitHelper.WillAdditionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillAdditionOverflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_INC is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Decrement
     private int Execute_DEC(DecodedOperation operation)
     {
-        // Decrement operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for DEC operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("DEC requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = 1;
+                result = (byte)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = 1;
+                result = (ushort)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+                uint b = 1;
+
+                result = a - b;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SUB is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Decimal Adjust A
+    // Implementation taken from "The Undocumented Z80 Documented" by Sean Young
     private int Execute_DAA(DecodedOperation operation)
     {
-        // Decimal Adjust for Addition logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for DAA operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("DAA requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+        ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+
+        ALUFlagState flagState = GetALUFlags();
+
+        int t = 0;
+
+        if (flagState.HalfCarry || ((a & 0xF) > 9))
+        {
+            t++;
+        }
+
+        if (flagState.Carry || (a > 0x99))
+        {
+            t += 2;
+            flagState.Carry = true;
+        }
+
+
+        if (flagState.Negative && !flagState.HalfCarry)
+        {
+            flagState.HalfCarry = false;
+        }
+        else
+        {
+            if (flagState.Negative && flagState.HalfCarry)
+            {
+                flagState.HalfCarry = (a & 0x0F) < 6;
+            }
+            else
+            {
+                flagState.HalfCarry = (a & 0x0F) >= 0x0A;
+            }
+        }
+
+        switch (t)
+        {
+            case 1:
+            {
+                a += (byte)(flagState.Negative ? 0xFA : 0x06); // -6:6
+                break;
+            }
+            case 2:
+            {
+                a += (byte)(flagState.Negative ? 0xA0 : 0x60); // -0x60:0x60
+                break;
+            }
+            case 3:
+            {
+                a += (byte)(flagState.Negative ? 0x9A : 0x66); // -0x66:0x66
+                break;
+            }
+        }
+
+        flagState.Sign = (a & 0x80) != 0;
+        flagState.Zero = a == 0;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(a);
+
+        UpdateALUFlags(flagState);
+        Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word, a);
+
+        return cycles;
     }
 
+    // Negate
+    // Implemented as 0 - x for flags
     private int Execute_NEG(DecodedOperation operation)
     {
-        // Negate operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for NEG operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("NEG requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operandRead.Value;
+
+                result = (byte)-a;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(0, a);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(0, a);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(0, a);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operandRead.Value;
+
+                result = (ushort)-a;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(0, a);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(0, a);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operandRead.Value;
+
+                result = (uint)-a;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(0, a);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(0, a);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_NEG is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Sign Extend
     private int Execute_EXT(DecodedOperation operation)
     {
-        // Sign Extend operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for EXT operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("EXT requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operandRead.Value;
+                result = (ushort)Helpers.BitHelper.SignExtend(a, 8);
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operandRead.Value;
+                result = Helpers.BitHelper.SignExtend(a, 16);
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_EXT is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Multiply
     private int Execute_MLT(DecodedOperation operation)
     {
-        // Multiply operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for MLT operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("MLT requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        // TODO: Use Booth's Algorithm to better calculate cycles
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Word:
+            {
+                int multiplicand = (int)(operandRead.Value & 0xFF);
+                int multiplier = (int)((operandRead.Value >> 8) & 0xFF);
+
+                int cyclesPerIteration = 4; // Branch, Shift, Loop Overhead
+                cycles += cyclesPerIteration * 8; // 8 Iterations for 8*8 mult
+                cycles += Helpers.BitHelper.NumberOfOnes((uint)multiplicand); // Roughly number of adds/subs needed
+
+                result = (ushort)(multiplicand * multiplier);
+
+                flagState.Carry = result > byte.MaxValue;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                int multiplicand = (int)(operandRead.Value & 0xFFFF);
+                int multiplier = (int)((operandRead.Value >> 16) & 0xFFFF);
+
+                int cyclesPerIteration = 4 + Config.DWordALUCost; // Branch, Shift, Loop Overhead
+                cycles += cyclesPerIteration * 16; // 16 iterations for 16*16 mult
+                cycles += Helpers.BitHelper.NumberOfOnes((uint)multiplicand); // Roughly number of adds/subs needed
+
+                result = (uint)(multiplicand * multiplier);
+
+                flagState.Carry = result > ushort.MaxValue;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_MLT is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.HalfCarry = false;
+        flagState.Negative = false;
+        flagState.Zero = result == 0; // Technically undefined, probably want to define. Seems useful.
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Divide
     private int Execute_DIV(DecodedOperation operation)
     {
-        // Divide operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for DIV operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("DIV requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+
+        // TODO: Use Non-Restoring Division Algorithm to better calculate cycles
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Word:
+            {
+                uint dividend = (operandRead.Value >> 8) & 0xFF;
+                uint divisor = operandRead.Value & 0xFF;
+
+                // Decision
+                cycles += 1;
+                if (divisor == 0)
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, true);
+                }
+                else
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, false);
+
+                    int cyclesPerIteration = 4; // Branch, Shift, Loop Overhead
+                    cycles += cyclesPerIteration * 8; // 8 Iterations for 8/8 div
+                    cycles += Helpers.BitHelper.NumberOfOnes(dividend); // Roughly number of adds/subs needed
+
+                    result = (byte)(dividend / divisor); // Quotient in lower half
+                    result |= (uint)(byte)(dividend % divisor) << 8; // Remainder in upper half
+                }
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                uint dividend = (operandRead.Value >> 16) & 0xFFFF;
+                uint divisor = operandRead.Value & 0xFFFF;
+
+                // Decision
+                cycles += 1;
+                if (divisor == 0)
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, true);
+                }
+                else
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, false);
+
+                    int cyclesPerIteration = 4 + Config.DWordALUCost; // Branch, Shift, Loop Overhead
+                    cycles += cyclesPerIteration * 16; // 16 Iterations for 16/16 div
+                    cycles += Helpers.BitHelper.NumberOfOnes(dividend); // Roughly number of adds/subs needed
+
+                    result = (ushort)(dividend / divisor); // Quotient in lower half
+                    result |= (uint)(ushort)(dividend % divisor) << 16; // Remainder in upper half
+                }
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_DIV is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Signed Divide
     private int Execute_SDIV(DecodedOperation operation)
     {
-        // Signed Divide operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SDIV operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("SDIV requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operandRead.Cycles;
+
+        uint result = 0;
+
+        // TODO: Use Non-Restoring Division Algorithm to better calculate cycles
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Word:
+            {
+                int dividend = (int)((operandRead.Value >> 8) & 0xFF);
+                int divisor = (int)(operandRead.Value & 0xFF);
+
+                // Detect signs, detect 0, negate
+                cycles += 4;
+
+                if (divisor == 0)
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, true);
+                }
+                else
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, false);
+
+                    int cyclesPerIteration = 4; // Branch, Shift, Loop Overhead
+                    cycles += cyclesPerIteration * 16; // 16 Iterations for 16/16 div
+                    cycles += Helpers.BitHelper.NumberOfOnes((uint)dividend); // Roughly number of adds/subs needed
+
+                    // Negate result decision
+                    cycles++;
+
+                    result = (byte)(dividend / divisor); // Quotient in lower half
+                    result |= (uint)(byte)(dividend % divisor) << 8; // Remainder in upper half
+                }
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                int dividend = (int)((operandRead.Value >> 16) & 0xFFFF);
+                int divisor = (int)(operandRead.Value & 0xFFFF);
+
+                // Detect signs, detect 0, negate
+                cycles += 4;
+
+                if (divisor == 0)
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, true);
+                }
+                else
+                {
+                    Registers.SetFlag(Constants.FlagMasks.ParityOverflow, false);
+
+                    int cyclesPerIteration = 4 + Config.DWordALUCost; // Branch, Shift, Loop Overhead
+                    cycles += cyclesPerIteration * 8; // 8 Iterations for 8/8 div
+                    cycles += Helpers.BitHelper.NumberOfOnes((uint)dividend); // Roughly number of adds/subs needed
+
+                    // Negate result decision
+                    cycles++;
+
+                    result = (ushort)(dividend / divisor); // Quotient in lower half
+                    result |= (uint)(ushort)(dividend % divisor) << 16; // Remainder in upper half
+                }
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SDIV is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_AND(DecodedOperation operation)
