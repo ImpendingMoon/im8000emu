@@ -35,7 +35,7 @@ internal partial class CPU
             throw new ArgumentException("LD requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operandRead = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operandRead.Cycles;
@@ -54,7 +54,7 @@ internal partial class CPU
             throw new ArgumentException("EX requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operandRead1 = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead1.Cycles;
@@ -130,7 +130,7 @@ internal partial class CPU
             throw new ArgumentException("EXH requires one operand");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
@@ -176,7 +176,7 @@ internal partial class CPU
             throw new ArgumentException("PUSH requires one operand");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
@@ -217,7 +217,7 @@ internal partial class CPU
             throw new ArgumentException("POP requires one operand");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
@@ -381,7 +381,7 @@ internal partial class CPU
             throw new ArgumentException("ADD requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
@@ -426,7 +426,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                cycles += 1; // Needs to ripple through ALU twice
+                cycles += Config.DWordALUCost;
 
                 uint a = operand1Read.Value;
                 uint b = operand2Read.Value;
@@ -465,7 +465,7 @@ internal partial class CPU
             throw new ArgumentException("ADC requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
@@ -512,7 +512,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                cycles += 1; // Needs to ripple through ALU twice
+                cycles += Config.DWordALUCost;
 
                 uint a = operand1Read.Value;
                 uint b = operand2Read.Value;
@@ -552,7 +552,7 @@ internal partial class CPU
             throw new ArgumentException("SUB requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
@@ -597,7 +597,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                cycles += 1; // Needs to ripple through ALU twice
+                cycles += Config.DWordALUCost;
 
                 uint a = operand1Read.Value;
                 uint b = operand2Read.Value;
@@ -636,7 +636,7 @@ internal partial class CPU
             throw new ArgumentException("SBC requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
@@ -683,7 +683,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                cycles += 1; // Needs to ripple through ALU twice
+                cycles += Config.DWordALUCost;
 
                 uint a = operand1Read.Value;
                 uint b = operand2Read.Value;
@@ -723,7 +723,7 @@ internal partial class CPU
             throw new ArgumentException("CP requires two operands");
         }
 
-        int cycles = operation.FetchCycles + 1;
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
@@ -768,7 +768,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                cycles += 1; // Needs to ripple through ALU twice
+                cycles += Config.DWordALUCost;
 
                 uint a = operand1Read.Value;
                 uint b = operand2Read.Value;

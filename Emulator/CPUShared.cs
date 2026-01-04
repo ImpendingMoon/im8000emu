@@ -17,7 +17,7 @@ internal partial class CPU
             case Constants.OperandSize.Byte:
             {
                 result.Value = _memoryBus.ReadByte(address);
-                result.Cycles = 3;
+                result.Cycles = 1;
                 break;
             }
 
@@ -25,7 +25,7 @@ internal partial class CPU
             {
                 Span<byte> data = _memoryBus.ReadByteArray(address, 2);
                 result.Value = BitConverter.ToUInt16(data);
-                result.Cycles = aligned ? 3 : 6;
+                result.Cycles = aligned ? 1 : 2;
                 break;
             }
 
@@ -33,7 +33,7 @@ internal partial class CPU
             {
                 Span<byte> data = _memoryBus.ReadByteArray(address, 4);
                 result.Value = BitConverter.ToUInt32(data);
-                result.Cycles = aligned ? 6 : 9;
+                result.Cycles = aligned ? 2 : 3;
                 break;
             }
 
@@ -42,6 +42,8 @@ internal partial class CPU
                 throw new ArgumentException($"ReadMemory is not implemented for OperandSize {size}");
             }
         }
+
+        result.Cycles *= Config.BusCycleCost;
 
         return result;
     }
@@ -60,7 +62,7 @@ internal partial class CPU
             case Constants.OperandSize.Byte:
             {
                 _memoryBus.WriteByte(address, (byte)value);
-                result.Cycles = 3;
+                result.Cycles = 1;
                 break;
             }
 
@@ -68,7 +70,7 @@ internal partial class CPU
             {
                 byte[] bytes = BitConverter.GetBytes(value);
                 _memoryBus.WriteByteArray(address, bytes);
-                result.Cycles = aligned ? 3 : 6;
+                result.Cycles = aligned ? 1 : 2;
                 break;
             }
 
@@ -76,7 +78,7 @@ internal partial class CPU
             {
                 byte[] bytes = BitConverter.GetBytes(value);
                 _memoryBus.WriteByteArray(address, bytes);
-                result.Cycles = aligned ? 6 : 9;
+                result.Cycles = aligned ? 2 : 3;
                 break;
             }
 
@@ -85,6 +87,8 @@ internal partial class CPU
                 throw new ArgumentException($"WriteMemory is not implemented for OperandSize {size}");
             }
         }
+
+        result.Cycles *= Config.BusCycleCost;
 
         return result;
     }
