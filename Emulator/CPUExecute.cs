@@ -176,31 +176,22 @@ internal partial class CPU
             throw new ArgumentException("PUSH requires one operand");
         }
 
+        if (operation.OperandSize != Constants.OperandSize.DWord)
+        {
+            throw new ArgumentException("PUSH only operates on DWord operands");
+        }
+
         int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
-
-        uint value = operandRead.Value;
-
-        // PUSH sign extends into dwords
-        // ISA Design Note: Should we have this behavior? Or should we only support dword targets?
-        if (operation.OperandSize == Constants.OperandSize.Byte)
-        {
-            value = Helpers.BitHelper.SignExtend(value, 8);
-        }
-        else if (operation.OperandSize == Constants.OperandSize.Word)
-        {
-            value = Helpers.BitHelper.SignExtend(value, 16);
-        }
-
         uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
         // Pre-decrement for PUSH
         stackPointer -= 4;
 
         // Write value to memory
-        MemoryResult operandWrite = WriteMemory(stackPointer, Constants.OperandSize.DWord, value);
+        MemoryResult operandWrite = WriteMemory(stackPointer, Constants.OperandSize.DWord, operandRead.Value);
         cycles += operandWrite.Cycles;
 
         // Writeback SP
@@ -217,6 +208,11 @@ internal partial class CPU
             throw new ArgumentException("POP requires one operand");
         }
 
+        if (operation.OperandSize != Constants.OperandSize.DWord)
+        {
+            throw new ArgumentException("POP only operates on DWord operands");
+        }
+
         int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
         uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
@@ -228,7 +224,6 @@ internal partial class CPU
         uint value = operandRead.Value;
 
         // Write to destination
-        // ISA Design Note: This is non-intuitive behavior. Reading dword and truncating to operand size.
         MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, value);
         cycles += operandWrite.Cycles;
 

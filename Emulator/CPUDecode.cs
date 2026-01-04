@@ -212,8 +212,6 @@ internal partial class CPU
         {
             0b00000 => Constants.Operation.LD,
             0b00001 => Constants.Operation.EX,
-            0b00010 => Constants.Operation.IN, // ISA Design Note: IN and OUT should probably be R-only instructions
-            0b00011 => Constants.Operation.OUT,
             0b00100 => Constants.Operation.ADD,
             0b00101 => Constants.Operation.ADC,
             0b00110 => Constants.Operation.SUB,
