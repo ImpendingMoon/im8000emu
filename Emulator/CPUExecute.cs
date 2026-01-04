@@ -715,10 +715,87 @@ internal partial class CPU
         return cycles;
     }
 
+    // Compare
     private int Execute_CP(DecodedOperation operation)
     {
-        // Compare operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CP operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("CP requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + 1;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        var flagState = new ALUFlagState();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(a, b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += 1; // Needs to ripple through ALU twice
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a - b;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.HalfCarry = false; // Undefined
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_CP is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Negative = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        // No writeback
+
+        return cycles;
     }
 
     private int Execute_INC(DecodedOperation operation)
