@@ -142,7 +142,7 @@ internal sealed class Registers
         var sb = new StringBuilder();
 
         sb.Append($"C: {GetFlag(Constants.FlagMasks.Carry)} ");
-        sb.Append($"N: {GetFlag(Constants.FlagMasks.Negative)} ");
+        sb.Append($"N: {GetFlag(Constants.FlagMasks.Subtract)} ");
         sb.Append($"PV: {GetFlag(Constants.FlagMasks.ParityOverflow)} ");
         sb.Append($"H: {GetFlag(Constants.FlagMasks.HalfCarry)} ");
         sb.Append($"Z: {GetFlag(Constants.FlagMasks.Zero)} ");

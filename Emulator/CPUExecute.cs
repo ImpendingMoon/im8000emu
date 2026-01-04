@@ -442,7 +442,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = false;
+        flagState.Subtract = false;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -529,7 +529,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = false;
+        flagState.Subtract = false;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -613,7 +613,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = true;
+        flagState.Subtract = true;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -700,7 +700,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = true;
+        flagState.Subtract = true;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -784,7 +784,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = true;
+        flagState.Subtract = true;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -861,7 +861,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = false;
+        flagState.Subtract = false;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -940,7 +940,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = true;
+        flagState.Subtract = true;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -978,13 +978,13 @@ internal partial class CPU
         }
 
 
-        if (flagState.Negative && !flagState.HalfCarry)
+        if (flagState.Subtract && !flagState.HalfCarry)
         {
             flagState.HalfCarry = false;
         }
         else
         {
-            if (flagState.Negative && flagState.HalfCarry)
+            if (flagState.Subtract && flagState.HalfCarry)
             {
                 flagState.HalfCarry = (a & 0x0F) < 6;
             }
@@ -998,17 +998,17 @@ internal partial class CPU
         {
             case 1:
             {
-                a += (byte)(flagState.Negative ? 0xFA : 0x06); // -6:6
+                a += (byte)(flagState.Subtract ? 0xFA : 0x06); // -6:6
                 break;
             }
             case 2:
             {
-                a += (byte)(flagState.Negative ? 0xA0 : 0x60); // -0x60:0x60
+                a += (byte)(flagState.Subtract ? 0xA0 : 0x60); // -0x60:0x60
                 break;
             }
             case 3:
             {
-                a += (byte)(flagState.Negative ? 0x9A : 0x66); // -0x66:0x66
+                a += (byte)(flagState.Subtract ? 0x9A : 0x66); // -0x66:0x66
                 break;
             }
         }
@@ -1092,7 +1092,7 @@ internal partial class CPU
             }
         }
 
-        flagState.Negative = true;
+        flagState.Subtract = true;
         flagState.Zero = result == 0;
         UpdateALUFlags(flagState);
 
@@ -1208,7 +1208,7 @@ internal partial class CPU
         }
 
         flagState.HalfCarry = false;
-        flagState.Negative = false;
+        flagState.Subtract = false;
         flagState.Zero = result == 0; // Technically undefined, probably want to define. Seems useful.
         UpdateALUFlags(flagState);
 

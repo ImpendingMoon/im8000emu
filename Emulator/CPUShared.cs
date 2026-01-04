@@ -257,7 +257,7 @@ internal partial class CPU
     private void UpdateALUFlags(ALUFlagState state)
     {
         Registers.SetFlag(Constants.FlagMasks.Carry, state.Carry);
-        Registers.SetFlag(Constants.FlagMasks.Negative, state.Negative);
+        Registers.SetFlag(Constants.FlagMasks.Subtract, state.Subtract);
         Registers.SetFlag(Constants.FlagMasks.ParityOverflow, state.ParityOverflow);
         Registers.SetFlag(Constants.FlagMasks.HalfCarry, state.HalfCarry);
         Registers.SetFlag(Constants.FlagMasks.Zero, state.Zero);
@@ -269,7 +269,7 @@ internal partial class CPU
         return new ALUFlagState()
         {
             Carry = Registers.GetFlag(Constants.FlagMasks.Carry),
-            Negative = Registers.GetFlag(Constants.FlagMasks.Negative),
+            Subtract = Registers.GetFlag(Constants.FlagMasks.Subtract),
             ParityOverflow = Registers.GetFlag(Constants.FlagMasks.ParityOverflow),
             HalfCarry = Registers.GetFlag(Constants.FlagMasks.HalfCarry),
             Zero = Registers.GetFlag(Constants.FlagMasks.Zero),
@@ -286,7 +286,7 @@ internal partial class CPU
     private struct ALUFlagState
     {
         public bool Carry;
-        public bool Negative;
+        public bool Subtract;
         public bool ParityOverflow;
         public bool HalfCarry;
         public bool Zero;

@@ -58,7 +58,7 @@ internal static class Constants
         HalfCarry = 0b0001_0000,
         Unused3 = 0b0000_1000,
         ParityOverflow = 0b0000_0100,
-        Negative = 0b0000_0010,
+        Subtract = 0b0000_0010,
         Carry = 0b0000_0001,
     }
 
