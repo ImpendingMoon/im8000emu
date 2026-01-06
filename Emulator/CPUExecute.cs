@@ -1386,6 +1386,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // AND
     private int Execute_AND(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is null)
@@ -1463,6 +1464,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // OR
     private int Execute_OR(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is null)
@@ -1540,6 +1542,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // XOR
     private int Execute_XOR(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is null)
@@ -1617,6 +1620,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // TST
     private int Execute_TST(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is null)
@@ -1693,6 +1697,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // CPL
     private int Execute_CPL(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is not null)
@@ -1764,22 +1769,161 @@ internal partial class CPU
         return cycles;
     }
 
+    // Test bit
     private int Execute_BIT(DecodedOperation operation)
     {
-        // Bit test operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for BIT operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("BIT requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint bit = operand2Read.Value;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.Zero = (((int)operand1Read.Value >> (int)bit) & 1) == 0;
+        UpdateALUFlags(flagState);
+
+        return cycles;
     }
 
+    // Set bit
     private int Execute_SET(DecodedOperation operation)
     {
-        // Set bit operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SET operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SET requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint bit = operand2Read.Value;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        uint result = operand1Read.Value;
+        result |= (uint)(1 << (int)bit);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Reset bit
     private int Execute_RES(DecodedOperation operation)
     {
-        // Reset bit operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RES operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("RES requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint bit = operand2Read.Value;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        uint result = operand1Read.Value;
+        result &= ~(uint)(1 << (int)bit);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_RLC(DecodedOperation operation)
