@@ -236,16 +236,10 @@ internal partial class CPU
         return cycles;
     }
 
-    private int Execute_IN(DecodedOperation operation)
+    private int Execute_IN_OUT(DecodedOperation operation)
     {
         // Input from I/O logic would go here
         return operation.FetchCycles + 1; // Example cycle count for IN operation
-    }
-
-    private int Execute_OUT(DecodedOperation operation)
-    {
-        // Output to I/O logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OUT operation
     }
 
     private int Execute_LDI(DecodedOperation operation)
@@ -385,7 +379,7 @@ internal partial class CPU
         cycles += operand2Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -469,7 +463,7 @@ internal partial class CPU
         cycles += operand2Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -556,7 +550,7 @@ internal partial class CPU
         cycles += operand2Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -640,7 +634,7 @@ internal partial class CPU
         cycles += operand2Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -727,7 +721,7 @@ internal partial class CPU
         cycles += operand2Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -807,7 +801,7 @@ internal partial class CPU
         cycles += operandRead.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -885,7 +879,7 @@ internal partial class CPU
         cycles += operand1Read.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -1038,7 +1032,7 @@ internal partial class CPU
         cycles += operandRead.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
         {
@@ -1161,7 +1155,7 @@ internal partial class CPU
         cycles += operandRead.Cycles;
 
         uint result = 0;
-        var flagState = new ALUFlagState();
+        ALUFlagState flagState = GetALUFlags();
 
         // TODO: Use Booth's Algorithm to better calculate cycles
 
@@ -1394,32 +1388,380 @@ internal partial class CPU
 
     private int Execute_AND(DecodedOperation operation)
     {
-        // AND operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for AND operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("AND requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a & b);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a & b);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a & b;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_AND is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = true;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_OR(DecodedOperation operation)
     {
-        // OR operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OR operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("OR requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a | b);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a | b);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a | b;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_OR is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_XOR(DecodedOperation operation)
     {
-        // XOR operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for XOR operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("XOR requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a ^ b);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a ^ b);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a ^ b;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_XOR is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_TST(DecodedOperation operation)
     {
-        // Test operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for TST operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("TST requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+                byte b = (byte)operand2Read.Value;
+
+                result = (byte)(a & b);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+                ushort b = (ushort)operand2Read.Value;
+
+                result = (ushort)(a & b);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+                uint b = operand2Read.Value;
+
+                result = a & b;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_TST is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = true;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        // No writeback
+
+        return cycles;
     }
 
     private int Execute_CPL(DecodedOperation operation)
     {
-        // Complement operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CPL operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CPL requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                byte a = (byte)operand1Read.Value;
+
+                result = (byte)(a ^ 0xFF);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                ushort a = (ushort)operand1Read.Value;
+
+                result = (ushort)(a ^ 0xFFFF);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                uint a = operand1Read.Value;
+
+                result = a ^ 0xFFFFFFFF;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_BIT(DecodedOperation operation)

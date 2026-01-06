@@ -99,8 +99,7 @@ internal static class Constants
         EXH,    // Exchange Halves
         PUSH,   // Push to stack
         POP,    // Pop from stack
-        IN,     // In from I/O
-        OUT,    // Out to I/O
+        IN_OUT, // In/Out from/to I/O
 
         // Block operations
         LDI,    // Load and Increment
