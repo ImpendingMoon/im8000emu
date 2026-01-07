@@ -238,8 +238,41 @@ internal partial class CPU
 
     private int Execute_IN_OUT(DecodedOperation operation)
     {
-        // Input from I/O logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for IN operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("IN/OUT requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        // OUT, Operand1 is indirect
+        if (operation.Operand1.Indirect)
+        {
+            MemoryResult valueRead = GetOperandValue(operation.Operand2, operation.OperandSize);
+            cycles += valueRead.Cycles;
+
+            // Use GetOperandValue internal logic directly, since this is the only instruction which uses I/O
+            uint port = GetEffectiveAddress(operation.Operand1);
+            MemoryResult ioWrite = WriteMemory(port, operation.OperandSize, valueRead.Value, useIO: true);
+            cycles += ioWrite.Cycles;
+        }
+        // IN, Operand2 is indirect
+        else if (operation.Operand2.Indirect)
+        {
+            uint port = GetEffectiveAddress(operation.Operand2);
+            MemoryResult ioRead = ReadMemory(port, operation.OperandSize, useIO: true);
+            cycles += ioRead.Cycles;
+
+            MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, ioRead.Value);
+            cycles += operandWrite.Cycles;
+        }
+        // Some mysterious third thing that means I need to debug the decoder
+        else
+        {
+            throw new Exception("IN/OUT requires one indirect operand");
+        }
+
+        return cycles;
     }
 
     private int Execute_LDI(DecodedOperation operation)

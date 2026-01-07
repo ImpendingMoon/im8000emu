@@ -6,24 +6,26 @@ internal partial class CPU
     private readonly MemoryBus _memoryBus;
     private readonly MemoryBus _ioBus;
 
-    private MemoryResult ReadMemory(uint address, Constants.OperandSize size)
+    private MemoryResult ReadMemory(uint address, Constants.OperandSize size, bool useIO = false)
     {
         var result = new MemoryResult();
 
         bool aligned = address % 2 == 0;
 
+        MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
+
         switch (size)
         {
             case Constants.OperandSize.Byte:
             {
-                result.Value = _memoryBus.ReadByte(address);
+                result.Value = activeBus.ReadByte(address);
                 result.Cycles = 1;
                 break;
             }
 
             case Constants.OperandSize.Word:
             {
-                Span<byte> data = _memoryBus.ReadByteArray(address, 2);
+                Span<byte> data = activeBus.ReadByteArray(address, 2);
                 result.Value = BitConverter.ToUInt16(data);
                 result.Cycles = aligned ? 1 : 2;
                 break;
@@ -31,7 +33,7 @@ internal partial class CPU
 
             case Constants.OperandSize.DWord:
             {
-                Span<byte> data = _memoryBus.ReadByteArray(address, 4);
+                Span<byte> data = activeBus.ReadByteArray(address, 4);
                 result.Value = BitConverter.ToUInt32(data);
                 result.Cycles = aligned ? 2 : 3;
                 break;
@@ -43,12 +45,12 @@ internal partial class CPU
             }
         }
 
-        result.Cycles *= Config.BusCycleCost;
+        result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
         return result;
     }
 
-    private MemoryResult WriteMemory(uint address, Constants.OperandSize size, uint value)
+    private MemoryResult WriteMemory(uint address, Constants.OperandSize size, uint value, bool useIO = false)
     {
         var result = new MemoryResult()
         {
@@ -57,11 +59,13 @@ internal partial class CPU
 
         bool aligned = address % 2 == 0;
 
+        MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
+
         switch (size)
         {
             case Constants.OperandSize.Byte:
             {
-                _memoryBus.WriteByte(address, (byte)value);
+                activeBus.WriteByte(address, (byte)value);
                 result.Cycles = 1;
                 break;
             }
@@ -69,7 +73,7 @@ internal partial class CPU
             case Constants.OperandSize.Word:
             {
                 byte[] bytes = BitConverter.GetBytes(value);
-                _memoryBus.WriteByteArray(address, bytes);
+                activeBus.WriteByteArray(address, bytes);
                 result.Cycles = aligned ? 1 : 2;
                 break;
             }
@@ -77,7 +81,7 @@ internal partial class CPU
             case Constants.OperandSize.DWord:
             {
                 byte[] bytes = BitConverter.GetBytes(value);
-                _memoryBus.WriteByteArray(address, bytes);
+                activeBus.WriteByteArray(address, bytes);
                 result.Cycles = aligned ? 2 : 3;
                 break;
             }
@@ -88,7 +92,7 @@ internal partial class CPU
             }
         }
 
-        result.Cycles *= Config.BusCycleCost;
+        result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
         return result;
     }
