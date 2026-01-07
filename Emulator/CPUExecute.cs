@@ -236,6 +236,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // In/Out
     private int Execute_IN_OUT(DecodedOperation operation)
     {
         if (operation.Operand1 is null || operation.Operand2 is null)
@@ -275,6 +276,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Load and Increment
     private int Execute_LDI(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -289,6 +291,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Load, Increment, and Repeat
     private int Execute_LDIR(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -304,6 +307,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Load and Decrement
     private int Execute_LDD(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -318,6 +322,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Load, Decrement, and Repeat
     private int Execute_LDDR(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -333,6 +338,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Compare and Increment
     private int Execute_CPI(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -347,6 +353,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Compare, Increment, and Repeat
     private int Execute_CPIR(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -362,6 +369,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Compare and Decrement
     private int Execute_CPD(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -376,6 +384,7 @@ internal partial class CPU
         return cycles;
     }
 
+    // Compare, Decrement, and Repeat
     private int Execute_CPDR(DecodedOperation operation)
     {
         if (operation.Operand1 is not null || operation.Operand2 is not null)
@@ -1198,8 +1207,6 @@ internal partial class CPU
         uint result = 0;
         ALUFlagState flagState = GetALUFlags();
 
-        // TODO: Use Booth's Algorithm to better calculate cycles
-
         switch (operation.OperandSize)
         {
             case Constants.OperandSize.Word:
@@ -1267,8 +1274,6 @@ internal partial class CPU
         cycles += operandRead.Cycles;
 
         uint result = 0;
-
-        // TODO: Use Non-Restoring Division Algorithm to better calculate cycles
 
         switch (operation.OperandSize)
         {
@@ -1350,8 +1355,6 @@ internal partial class CPU
         cycles += operandRead.Cycles;
 
         uint result = 0;
-
-        // TODO: Use Non-Restoring Division Algorithm to better calculate cycles
 
         switch (operation.OperandSize)
         {
@@ -2099,16 +2102,35 @@ internal partial class CPU
         return operation.FetchCycles + 1; // Example cycle count for RST operation
     }
 
+    // Set Carry Flag
     private int Execute_SCF(DecodedOperation operation)
     {
-        // Set Carry Flag operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SCF operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("SCF requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        Registers.SetFlag(Constants.FlagMasks.Carry, true);
+
+        return cycles;
     }
 
+    // Complement Carry Flag
     private int Execute_CCF(DecodedOperation operation)
     {
-        // Complement Carry Flag operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CCF operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CCF requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        bool carry = Registers.GetFlag(Constants.FlagMasks.Carry);
+        Registers.SetFlag(Constants.FlagMasks.Carry, !carry);
+
+        return cycles;
     }
 
     private int Execute_EI(DecodedOperation operation)
