@@ -277,50 +277,118 @@ internal partial class CPU
 
     private int Execute_LDI(DecodedOperation operation)
     {
-        // Load and Increment logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for LDI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("LDI requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_LD(operation.OperandSize, increment: true);
+
+        return cycles;
     }
 
     private int Execute_LDIR(DecodedOperation operation)
     {
-        // Load, Increment, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for LDIR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("LDIR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_LD(operation.OperandSize, increment: true);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
     private int Execute_LDD(DecodedOperation operation)
     {
-        // Load and Decrement logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for LDD operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("LDD requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_LD(operation.OperandSize, increment: false);
+
+        return cycles;
     }
 
     private int Execute_LDDR(DecodedOperation operation)
     {
-        // Load, Decrement, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for LDDR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("LDDR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_LD(operation.OperandSize, increment: false);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
     private int Execute_CPI(DecodedOperation operation)
     {
-        // Compare and Increment logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CPI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CPI requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_CP(operation.OperandSize, increment: true);
+
+        return cycles;
     }
 
     private int Execute_CPIR(DecodedOperation operation)
     {
-        // Compare, Increment, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CPIR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CPIR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_CP(operation.OperandSize, increment: true);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
     private int Execute_CPD(DecodedOperation operation)
     {
-        // Compare and Decrement logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CPD operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CPD requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_CP(operation.OperandSize, increment: false);
+
+        return cycles;
     }
 
     private int Execute_CPDR(DecodedOperation operation)
     {
-        // Compare, Decrement, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CPDR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CPD requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_CP(operation.OperandSize, increment: false);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
     private int Execute_TSI(DecodedOperation operation)
@@ -753,67 +821,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
-        ALUFlagState flagState = GetALUFlags();
-
-        switch (operation.OperandSize)
-        {
-            case Constants.OperandSize.Byte:
-            {
-                byte a = (byte)operand1Read.Value;
-                byte b = (byte)operand2Read.Value;
-
-                result = (byte)(a - b);
-
-                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
-                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
-                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry(a, b);
-                flagState.Sign = (result & 0x80) != 0;
-
-                break;
-            }
-
-            case Constants.OperandSize.Word:
-            {
-                ushort a = (ushort)operand1Read.Value;
-                ushort b = (ushort)operand2Read.Value;
-
-                result = (ushort)(a - b);
-
-                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
-                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
-                flagState.HalfCarry = false; // Undefined
-                flagState.Sign = (result & 0x8000) != 0;
-
-                break;
-            }
-
-            case Constants.OperandSize.DWord:
-            {
-                cycles += Config.DWordALUCost;
-
-                uint a = operand1Read.Value;
-                uint b = operand2Read.Value;
-
-                result = a - b;
-
-                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
-                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
-                flagState.HalfCarry = false; // Undefined
-                flagState.Sign = (result & 0x80000000) != 0;
-
-                break;
-            }
-
-            default:
-            {
-                throw new ArgumentException($"Execute_CP is not implemented for operand size {operation.OperandSize}");
-            }
-        }
-
-        flagState.Subtract = true;
-        flagState.Zero = result == 0;
-        UpdateALUFlags(flagState);
+        cycles += Internal_CP(operand1Read.Value, operand2Read.Value, operation.OperandSize);
 
         // No writeback
 
@@ -2149,5 +2157,187 @@ internal partial class CPU
     {
         // Load R into A operation logic would go here
         return operation.FetchCycles + 1; // Example cycle count for LD_A_R operation
+    }
+
+    private int Internal_Block_LD(Constants.OperandSize size, bool increment)
+    {
+        int cycles = 0;
+
+        uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
+        uint de = Registers.GetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord);
+        uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        MemoryResult readHL = ReadMemory(hl, size);
+        cycles += readHL.Cycles;
+        MemoryResult writeDE = WriteMemory(de, size, readHL.Value);
+        cycles += writeDE.Cycles;
+
+        cycles++; // Extra cycle for increment/decrement logic
+
+        uint adjustAmount = size switch
+        {
+            Constants.OperandSize.Byte => 1,
+            Constants.OperandSize.Word => 2,
+            Constants.OperandSize.DWord => 4,
+            _ => throw new Exception($"Internal_Block_LD is not implemented for OperandSize {size}")
+        };
+
+        if (increment)
+        {
+            hl += adjustAmount;
+            de += adjustAmount;
+        }
+        else
+        {
+            hl -= adjustAmount;
+            de -= adjustAmount;
+        }
+
+        // Decrement counter and update flags
+        bc--;
+
+        ALUFlagState flagState = GetALUFlags();
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.ParityOverflow = bc != 0;
+        UpdateALUFlags(flagState);
+
+        // Extra cycle for register writeback
+        cycles++;
+
+        Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
+        Registers.SetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord, de);
+        Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+
+        return cycles;
+    }
+
+    private int Internal_Block_CP(Constants.OperandSize size, bool increment)
+    {
+        int cycles = 0;
+
+        ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+        uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
+        uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        MemoryResult readHL = ReadMemory(hl, size);
+        cycles += readHL.Cycles;
+
+        cycles += Internal_CP(a, readHL.Value, size);
+
+        cycles++; // Extra cycle for increment/decrement logic
+
+        uint adjustAmount = size switch
+        {
+            Constants.OperandSize.Byte => 1,
+            Constants.OperandSize.Word => 2,
+            Constants.OperandSize.DWord => 4,
+            _ => throw new Exception($"Block_LD is not implemented for OperandSize {size}")
+        };
+
+        if (increment)
+        {
+            hl += adjustAmount;
+        }
+        else
+        {
+            hl -= adjustAmount;
+        }
+
+        // Decrement counter and update flags
+        bc--;
+
+        ALUFlagState flagState = GetALUFlags();
+        flagState.ParityOverflow = bc != 0;
+        UpdateALUFlags(flagState);
+
+        // Extra cycle for register writeback
+        cycles++;
+
+        Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
+        Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+
+        return cycles;
+    }
+
+    private int Internal_CP(uint a, uint b, Constants.OperandSize size)
+    {
+        int cycles = 0;
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (size)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                a = (byte)a;
+                b = (byte)b;
+
+                result = (byte)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap((byte)a, (byte)b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow((byte)a, (byte)b);
+                flagState.HalfCarry = Helpers.BitHelper.WillSubtractionHalfCarry((byte)a, (byte)b);
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                a = (ushort)a;
+                b = (ushort)b;
+
+                result = (ushort)(a - b);
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap((ushort)a, (ushort)b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow((ushort)a, (ushort)b);
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                result = a - b;
+
+                flagState.Carry = Helpers.BitHelper.WillSubtractionWrap(a, b);
+                flagState.ParityOverflow = Helpers.BitHelper.WillSubtractionUnderflow(a, b);
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Internal_CP is not implemented for operand size {size}");
+            }
+        }
+
+        flagState.Subtract = true;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        return cycles;
+    }
+
+    private int Internal_Block_Loop(DecodedOperation operation)
+    {
+        // If PV == 1 (BC != 0), continue
+        if (Registers.GetFlag(Constants.FlagMasks.ParityOverflow))
+        {
+            // Undo PC increment (so we can re-fetch)
+            uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc -= (uint)operation.Opcode.Count;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+
+            // Additional cycle to do the PC decrement
+            return 1;
+        }
+
+        // Otherwise, done. Advance normally.
+        return 0;
     }
 }
