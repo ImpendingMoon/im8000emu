@@ -400,28 +400,66 @@ internal partial class CPU
         return cycles;
     }
 
+    // Test and Increment
     private int Execute_TSI(DecodedOperation operation)
     {
-        // Test and Increment logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for TSI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("TSI requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_TST(operation.OperandSize, increment: true);
+
+        return cycles;
     }
 
+    // Test, Increment, and Repeat
     private int Execute_TSIR(DecodedOperation operation)
     {
-        // Test, Increment, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for TSIR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("TSIR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_TST(operation.OperandSize, increment: true);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
+    // Test and Decrement
     private int Execute_TSD(DecodedOperation operation)
     {
-        // Test and Decrement logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for TSD operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("TSD requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_TST(operation.OperandSize, increment: false);
+
+        return cycles;
     }
 
+    // Test, Decrement, and Repeat
     private int Execute_TSDR(DecodedOperation operation)
     {
-        // Test, Decrement, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for TSDR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("TSDR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_TST(operation.OperandSize, increment: false);
+        cycles += Internal_Block_Loop(operation);
+
+        return cycles;
     }
 
     private int Execute_INI(DecodedOperation operation)
@@ -1680,63 +1718,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
-        ALUFlagState flagState = GetALUFlags();
-
-        switch (operation.OperandSize)
-        {
-            case Constants.OperandSize.Byte:
-            {
-                byte a = (byte)operand1Read.Value;
-                byte b = (byte)operand2Read.Value;
-
-                result = (byte)(a & b);
-
-                flagState.Sign = (result & 0x80) != 0;
-
-                break;
-            }
-
-            case Constants.OperandSize.Word:
-            {
-                ushort a = (ushort)operand1Read.Value;
-                ushort b = (ushort)operand2Read.Value;
-
-                result = (ushort)(a & b);
-
-                flagState.Sign = (result & 0x8000) != 0;
-
-                break;
-            }
-
-            case Constants.OperandSize.DWord:
-            {
-                cycles += Config.DWordALUCost;
-
-                uint a = operand1Read.Value;
-                uint b = operand2Read.Value;
-
-                result = a & b;
-
-                flagState.Sign = (result & 0x80000000) != 0;
-
-                break;
-            }
-
-            default:
-            {
-                throw new ArgumentException($"Execute_TST is not implemented for operand size {operation.OperandSize}");
-            }
-        }
-
-        flagState.Carry = false;
-        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
-        flagState.HalfCarry = true;
-        flagState.Subtract = false;
-        flagState.Zero = result == 0;
-        UpdateALUFlags(flagState);
-
-        // No writeback
+        cycles += Internal_TST(operand1Read.Value, operand2Read.Value, operation.OperandSize);
 
         return cycles;
     }
@@ -2254,7 +2236,55 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Block_LD is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Block_CP is not implemented for OperandSize {size}")
+        };
+
+        if (increment)
+        {
+            hl += adjustAmount;
+        }
+        else
+        {
+            hl -= adjustAmount;
+        }
+
+        // Decrement counter and update flags
+        bc--;
+
+        ALUFlagState flagState = GetALUFlags();
+        flagState.ParityOverflow = bc != 0;
+        UpdateALUFlags(flagState);
+
+        // Extra cycle for register writeback
+        cycles++;
+
+        Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
+        Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+
+        return cycles;
+    }
+
+    private int Internal_Block_TST(Constants.OperandSize size, bool increment)
+    {
+        int cycles = 0;
+
+        ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+        uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
+        uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        MemoryResult readHL = ReadMemory(hl, size);
+        cycles += readHL.Cycles;
+
+        cycles += Internal_TST(a, readHL.Value, size);
+
+        cycles++; // Extra cycle for increment/decrement logic
+
+        uint adjustAmount = size switch
+        {
+            Constants.OperandSize.Byte => 1,
+            Constants.OperandSize.Word => 2,
+            Constants.OperandSize.DWord => 4,
+            _ => throw new Exception($"Block_TST is not implemented for OperandSize {size}")
         };
 
         if (increment)
@@ -2345,6 +2375,64 @@ internal partial class CPU
         return cycles;
     }
 
+    private int Internal_TST(uint a, uint b, Constants.OperandSize size)
+    {
+        int cycles = 0;
+        uint result = 0;
+        ALUFlagState flagState = GetALUFlags();
+
+        switch (size)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                a = (byte)a;
+                b = (byte)b;
+
+                result = (byte)(a ^ b);
+
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                a = (ushort)a;
+                b = (ushort)b;
+
+                result = (ushort)(a ^ b);
+
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                cycles += Config.DWordALUCost;
+
+                result = a ^ b;
+
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Internal_TST is not implemented for operand size {size}");
+            }
+        }
+
+        flagState.Carry = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Subtract = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        return cycles;
+    }
     private int Internal_Block_Loop(DecodedOperation operation)
     {
         // If PV == 1 (BC != 0), continue
