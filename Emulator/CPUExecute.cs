@@ -1118,7 +1118,7 @@ internal partial class CPU
         }
 
         int cycles = operation.FetchCycles + Config.BaseInstructionCost;
-        ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+        ushort a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
 
         ALUFlagState flagState = GetALUFlags();
 
@@ -1176,7 +1176,7 @@ internal partial class CPU
         flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(a);
 
         UpdateALUFlags(flagState);
-        Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word, a);
+        Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, a);
 
         return cycles;
     }
