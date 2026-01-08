@@ -2028,46 +2028,693 @@ internal partial class CPU
         return cycles;
     }
 
+    // Rotate left circular
     private int Execute_RLC(DecodedOperation operation)
     {
-        // Rotate Left with Carry operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RLC operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("RLC requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit7 = (byte)(a & 0x80);
+                    a = (byte)((a << 1) | (bit7 >> 7));
+                    flagState.Carry = bit7 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit15 = (ushort)(a & 0x8000);
+                    a = (ushort)((a << 1) | (bit15 >> 15));
+                    flagState.Carry = bit15 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit31 = result & 0x80000000;
+                    a = (a << 1) | (bit31 >> 31);
+                    flagState.Carry = bit31 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_RLC is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Rotate right circular
     private int Execute_RRC(DecodedOperation operation)
     {
-        // Rotate Right with Carry operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RRC operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("RRC requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit0 = (byte)(a & 1);
+                    a = (byte)((a >> 1) | (bit0 << 7));
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit0 = (ushort)(a & 1);
+                    a = (ushort)((a >> 1) | (bit0 << 15));
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit0 = result & 1;
+                    a = (a >> 1) | (bit0 << 31);
+                    flagState.Carry = bit0 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_RRC is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Rotate left
     private int Execute_RL(DecodedOperation operation)
     {
-        // Rotate Left operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RL operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("RL requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit7 = (byte)(a & 0x80);
+                    a = (byte)(a << 1);
+                    a |= (byte)(flagState.Carry ? 1 : 0);
+                    flagState.Carry = bit7 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit15 = (ushort)(a & 0x8000);
+                    a = (ushort)(a << 1);
+                    a |= (ushort)(flagState.Carry ? 1 : 0);
+                    flagState.Carry = bit15 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit31 = result & 0x80000000;
+                    a = a << 1;
+                    a |= (uint)(flagState.Carry ? 1 : 0);
+                    flagState.Carry = bit31 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_RL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Rotate right
     private int Execute_RR(DecodedOperation operation)
     {
-        // Rotate Right operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RR operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("RR requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit0 = (byte)(a & 1);
+                    a = (byte)((a >> 1) | ((flagState.Carry ? 1 : 0) << 7));
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit0 = (ushort)(a & 1);
+                    a = (ushort)((a >> 1) | ((flagState.Carry ? 1 : 0) << 15));
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit0 = result & 1;
+                    a = (a >> 1) | ((uint)(flagState.Carry ? 1 : 0) << 31);
+                    flagState.Carry = bit0 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_RR is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Shift left arithmetic
     private int Execute_SLA(DecodedOperation operation)
     {
-        // Shift Left Arithmetic operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SLA operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SLA requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit7 = (byte)(a & 0x80);
+                    a = (byte)(a << 1);
+                    flagState.Carry = bit7 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit15 = (ushort)(a & 0x8000);
+                    a = (ushort)(a << 1);
+                    flagState.Carry = bit15 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit31 = result & 0x80000000;
+                    a = a << 1;
+                    flagState.Carry = bit31 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_RL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Shift right arithmetic
     private int Execute_SRA(DecodedOperation operation)
     {
-        // Shift Right Arithmetic operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SRA operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SRA requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit0 = (byte)(a & 1);
+                    a = (byte)(a >> 1);
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit0 = (ushort)(a & 1);
+                    a = (ushort)(a >> 1);
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit0 = result & 1;
+                    a >>= 1;
+                    flagState.Carry = bit0 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SRA is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
+    // Shift right logical
     private int Execute_SRL(DecodedOperation operation)
     {
-        // Shift Right Logical operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for SRL operation
+        if (operation.Operand1 is null || operation.Operand2 is null)
+        {
+            throw new ArgumentException("SRL requires two operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
+        cycles += operand1Read.Cycles;
+
+        MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
+        cycles += operand2Read.Cycles;
+
+        ALUFlagState flagState = GetALUFlags();
+
+        uint bit = operand2Read.Value;
+        uint result = 0;
+        switch (operation.OperandSize)
+        {
+            case Constants.OperandSize.Byte:
+            {
+                bit &= 0b111;
+                byte a = (byte)operand1Read.Value;
+
+                // Microcoded multi-bit shift
+                for (int i = 0; i < bit; i++)
+                {
+                    byte bit0 = (byte)(a & 1);
+                    a = (byte)(a >>> 1);
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.Word:
+            {
+                bit &= 0b1111;
+                ushort a = (ushort)operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    ushort bit0 = (ushort)(a & 1);
+                    a = (ushort)(a >>> 1);
+                    flagState.Carry = bit0 != 0;
+                    cycles++;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x8000) != 0;
+
+                break;
+            }
+
+            case Constants.OperandSize.DWord:
+            {
+                bit &= 0b11111;
+                uint a = operand1Read.Value;
+
+                for (int i = 0; i < bit; i++)
+                {
+                    uint bit0 = result & 1;
+                    a >>>= 1;
+                    flagState.Carry = bit0 != 0;
+                    cycles += Config.DWordALUCost;
+                }
+
+                result = a;
+                flagState.Sign = (result & 0x80000000) != 0;
+
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentException($"Execute_SRL is not implemented for operand size {operation.OperandSize}");
+            }
+        }
+
+        flagState.Subtract = false;
+        flagState.ParityOverflow = Helpers.BitHelper.IsParityEven(result);
+        flagState.HalfCarry = false;
+        flagState.Zero = result == 0;
+        UpdateALUFlags(flagState);
+
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, result);
+        cycles += operandWrite.Cycles;
+
+        return cycles;
     }
 
     private int Execute_RLD(DecodedOperation operation)
