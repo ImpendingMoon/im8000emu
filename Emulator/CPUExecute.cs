@@ -462,52 +462,128 @@ internal partial class CPU
         return cycles;
     }
 
+    // Input and Increment
     private int Execute_INI(DecodedOperation operation)
     {
-        // Input and Increment logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for INI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("INI requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_IN(operation.OperandSize, increment: true);
+
+        return cycles;
     }
 
+    // Input, Increment, and Repeat
     private int Execute_INIR(DecodedOperation operation)
     {
-        // Input, Increment, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for INIR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("INIR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_IN(operation.OperandSize, increment: true);
+        cycles += Internal_IO_Block_Loop(operation);
+
+        return cycles;
     }
 
+    // Input and Decrement
     private int Execute_IND(DecodedOperation operation)
     {
-        // Input and Decrement logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for IND operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("IND requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_IN(operation.OperandSize, increment: false);
+
+        return cycles;
     }
 
+    // Input, Decrement, and Repeat
     private int Execute_INDR(DecodedOperation operation)
     {
-        // Input, Decrement, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for INDR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("INDR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_IN(operation.OperandSize, increment: false);
+        cycles += Internal_IO_Block_Loop(operation);
+
+        return cycles;
     }
 
+    // Output and Increment
     private int Execute_OUTI(DecodedOperation operation)
     {
-        // Output and Increment logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OUTI operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("OUTI requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_OUT(operation.OperandSize, increment: true);
+
+        return cycles;
     }
 
+    // Output, Increment, and Repeat
     private int Execute_OTIR(DecodedOperation operation)
     {
-        // Output, Increment, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OUTIR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("OTIR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_OUT(operation.OperandSize, increment: true);
+        cycles += Internal_IO_Block_Loop(operation);
+
+        return cycles;
     }
 
+    // Output and Decrement
     private int Execute_OUTD(DecodedOperation operation)
     {
-        // Output and Decrement logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OUTD operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("OUTD requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_OUT(operation.OperandSize, increment: false);
+
+        return cycles;
     }
 
+    // Output, Decrement, and Repeat
     private int Execute_OTDR(DecodedOperation operation)
     {
-        // Output, Decrement, and Repeat logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for OTDR operation
+        if (operation.Operand1 is not null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("OTDR requires no operands");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        cycles += Internal_Block_OUT(operation.OperandSize, increment: false);
+        cycles += Internal_IO_Block_Loop(operation);
+
+        return cycles;
     }
 
     // Add
@@ -2312,6 +2388,103 @@ internal partial class CPU
         return cycles;
     }
 
+    private int Internal_Block_IN(Constants.OperandSize size, bool increment)
+    {
+        int cycles = 0;
+
+        uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
+        uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.Word);
+        uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        MemoryResult readIO = ReadMemory(c, size, useIO: true);
+        cycles += readIO.Cycles;
+
+        MemoryResult writeHL = WriteMemory(hl, size, readIO.Value);
+        cycles += writeHL.Cycles;
+
+        cycles++; // Extra cycle for increment/decrement logic
+
+        uint adjustAmount = size switch
+        {
+            Constants.OperandSize.Byte => 1,
+            Constants.OperandSize.Word => 2,
+            Constants.OperandSize.DWord => 4,
+            _ => throw new Exception($"Internal_Block_IN is not implemented for OperandSize {size}")
+        };
+
+        if (increment)
+        {
+            hl += adjustAmount;
+        }
+        else
+        {
+            hl -= adjustAmount;
+        }
+
+        // Decrement counter and update flags
+        b--;
+
+        ALUFlagState flagState = GetALUFlags();
+        flagState.Zero = b == 0;
+        UpdateALUFlags(flagState);
+
+        // Extra cycle for register writeback
+        cycles++;
+
+        Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
+        Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+
+        return cycles;
+    }
+    private int Internal_Block_OUT(Constants.OperandSize size, bool increment)
+    {
+        int cycles = 0;
+
+        uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
+        uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.Word);
+        uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+
+        MemoryResult readHL = ReadMemory(hl, size);
+        cycles += readHL.Cycles;
+
+        MemoryResult writeIO = WriteMemory(hl, size, readHL.Value, useIO: true);
+        cycles += writeIO.Cycles;
+
+        cycles++; // Extra cycle for increment/decrement logic
+
+        uint adjustAmount = size switch
+        {
+            Constants.OperandSize.Byte => 1,
+            Constants.OperandSize.Word => 2,
+            Constants.OperandSize.DWord => 4,
+            _ => throw new Exception($"Internal_Block_OUT is not implemented for OperandSize {size}")
+        };
+
+        if (increment)
+        {
+            hl += adjustAmount;
+        }
+        else
+        {
+            hl -= adjustAmount;
+        }
+
+        // Decrement counter and update flags
+        b--;
+
+        ALUFlagState flagState = GetALUFlags();
+        flagState.Zero = b == 0;
+        UpdateALUFlags(flagState);
+
+        // Extra cycle for register writeback
+        cycles++;
+
+        Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
+        Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+
+        return cycles;
+    }
+
     private int Internal_CP(uint a, uint b, Constants.OperandSize size)
     {
         int cycles = 0;
@@ -2437,6 +2610,24 @@ internal partial class CPU
     {
         // If PV == 1 (BC != 0), continue
         if (Registers.GetFlag(Constants.FlagMasks.ParityOverflow))
+        {
+            // Undo PC increment (so we can re-fetch)
+            uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc -= (uint)operation.Opcode.Count;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+
+            // Additional cycle to do the PC decrement
+            return 1;
+        }
+
+        // Otherwise, done. Advance normally.
+        return 0;
+    }
+
+    private int Internal_IO_Block_Loop(DecodedOperation operation)
+    {
+        // If Z == 0 (B != 0), continue
+        if (!Registers.GetFlag(Constants.FlagMasks.Zero))
         {
             // Undo PC increment (so we can re-fetch)
             uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
