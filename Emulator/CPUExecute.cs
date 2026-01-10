@@ -2751,7 +2751,7 @@ internal partial class CPU
             MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
             cycles += addressRead.Cycles;
 
-            int displacement = (byte)addressRead.Value;
+            int displacement = (int)Helpers.BitHelper.SignExtend(addressRead.Value, 8);
 
             int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
             pc += displacement;
@@ -2778,7 +2778,7 @@ internal partial class CPU
             MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
             cycles += addressRead.Cycles;
 
-            int displacement = (ushort)addressRead.Value;
+            int displacement = (int)Helpers.BitHelper.SignExtend(addressRead.Value, 16);
 
             int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
             pc += displacement;
@@ -2832,7 +2832,7 @@ internal partial class CPU
             MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
             cycles += addressRead.Cycles;
 
-            int displacement = (byte)addressRead.Value;
+            int displacement = (int)Helpers.BitHelper.SignExtend(addressRead.Value, 8);
             pc = (uint)((int)pc + displacement);
             Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 
@@ -2860,7 +2860,7 @@ internal partial class CPU
             MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
             cycles += addressRead.Cycles;
 
-            int displacement = (ushort)addressRead.Value;
+            int displacement = (int)Helpers.BitHelper.SignExtend(addressRead.Value, 16);
             pc = (uint)((int)pc + displacement);
             Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 
@@ -2926,7 +2926,7 @@ internal partial class CPU
         if (b != 0)
         {
             int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
-            pc += (byte)operation.Operand1.Immediate.Value;
+            pc += (int)Helpers.BitHelper.SignExtend(operation.Operand1.Immediate.Value, 8);
             Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
             cycles += 2;
         }
@@ -2954,7 +2954,7 @@ internal partial class CPU
         if (a != 0)
         {
             int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
-            pc += (byte)operation.Operand1.Immediate.Value;
+            pc += (int)Helpers.BitHelper.SignExtend(operation.Operand1.Immediate.Value, 8);
             Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
             cycles += 2;
         }

@@ -4,14 +4,18 @@ internal class MemoryBus
 {
     public MemoryBus()
     {
-        Memory = new byte[65536];
-        var rng = new Random();
-
-        for (int i = 0; i < Memory.Length; i++)
-        {
-            // Fill memory with random data for testing purposes.
-            Memory[i] = (byte)rng.Next();
-        }
+        // Test program, calculate fibonacci sequence
+        Memory = [
+            0x00, 0xF8, 0x00, // LD.B L, 0
+            0x00, 0xF4, 0x01, // LD.B H, 1
+            0x00, 0xE5, 0x0A, 0x00, // LD.W B, 0
+            0x00, 0xC1, // LD A, L
+            0x08, 0xA1, // ADD A, H
+            0x00, 0xB9, // LD L, H
+            0x00, 0x15, // LD H, A
+            0x1F, 0xF6, // DJNZ -10
+            0x2A, 0xFE, 0xFC, 0xFF, // JR -4
+        ];
     }
 
     // Naive memory array. See commit 8eb002a2 for more complete implementation.

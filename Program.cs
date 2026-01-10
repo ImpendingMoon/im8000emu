@@ -12,7 +12,7 @@ internal class Program
         //cpu.Reset();
 
         // Example: Run a loop of whatever is in memory
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 100; i++)
         {
             try
             {

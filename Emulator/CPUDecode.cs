@@ -715,8 +715,7 @@ internal partial class CPU
          * - b4-b7 - Opcode (4 bits)
          */
 
-        // Endian weirdness. LSB is Opcode[1]
-        byte operationSelector = (byte)(decodedOperation.Opcode[1] >> 4);
+        byte operationSelector = (byte)(decodedOperation.Opcode[0] >> 4);
 
         decodedOperation.Operation = operationSelector switch
         {
@@ -732,7 +731,7 @@ internal partial class CPU
             decodedOperation.Operand1 = new Operand
             {
                 Target = null,
-                Immediate = decodedOperation.Opcode[0],
+                Immediate = decodedOperation.Opcode[1],
                 Indirect = false,
                 Displacement = null
             };
