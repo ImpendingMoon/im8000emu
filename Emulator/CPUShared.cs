@@ -254,6 +254,7 @@ internal partial class CPU
             Constants.Condition.PE => Registers.GetFlag(Constants.FlagMasks.ParityOverflow),
             Constants.Condition.P => !Registers.GetFlag(Constants.FlagMasks.Sign),
             Constants.Condition.N => Registers.GetFlag(Constants.FlagMasks.Sign),
+            Constants.Condition.Unconditional => true,
             _ => throw new ArgumentException($"IsConditionTrue is not implemented for condition {condition}")
         };
     }

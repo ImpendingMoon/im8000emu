@@ -185,17 +185,8 @@ internal partial class CPU
 
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
-        uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
 
-        // Pre-decrement for PUSH
-        stackPointer -= 4;
-
-        // Write value to memory
-        MemoryResult operandWrite = WriteMemory(stackPointer, Constants.OperandSize.DWord, operandRead.Value);
-        cycles += operandWrite.Cycles;
-
-        // Writeback SP
-        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
+        cycles += Internal_Push(operandRead.Value);
 
         return cycles;
     }
@@ -215,23 +206,12 @@ internal partial class CPU
 
         int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-        uint stackPointer = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
-
-        // Read value from memory
-        MemoryResult operandRead = ReadMemory(stackPointer, Constants.OperandSize.DWord);
-        cycles += operandRead.Cycles;
-
-        uint value = operandRead.Value;
+        MemoryResult popRead = Internal_Pop();
+        cycles += popRead.Cycles;
 
         // Write to destination
-        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, value);
+        MemoryResult operandWrite = WritebackOperand(operation.Operand1, operation.OperandSize, popRead.Value);
         cycles += operandWrite.Cycles;
-
-        // Post-increment for POP
-        stackPointer += 4;
-
-        // Writeback SP
-        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, stackPointer);
 
         return cycles;
     }
@@ -2735,46 +2715,181 @@ internal partial class CPU
         return operation.FetchCycles + 1;
     }
 
+    // Jump
     private int Execute_JP(DecodedOperation operation)
     {
-        // Jump operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for JP operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("JP requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, addressRead.Value);
+        }
+
+        return cycles;
     }
 
+    // Jump Relative Short
     private int Execute_JR_s8(DecodedOperation operation)
     {
-        // Jump Short Relative operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for JR operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("JR_s8 requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            int displacement = (byte)addressRead.Value;
+
+            int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc += displacement;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
+    // Jump Relative
     private int Execute_JR(DecodedOperation operation)
     {
-        // Jump Relative operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for JR operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("JR requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            int displacement = (ushort)addressRead.Value;
+
+            int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc += displacement;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
+    // Call
     private int Execute_CALL(DecodedOperation operation)
     {
-        // Call operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CALL operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CALL requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            cycles += Internal_Push(pc);
+
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, addressRead.Value);
+        }
+
+        return cycles;
     }
 
+    // Call Relative Short
     private int Execute_CALLR_s8(DecodedOperation operation)
     {
-        // Call Relative Short operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CALLR_s8 operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CALLR_s8 requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            cycles += Internal_Push(pc);
+
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            int displacement = (byte)addressRead.Value;
+            pc = (uint)((int)pc + displacement);
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
+    // Call Relative
     private int Execute_CALLR(DecodedOperation operation)
     {
-        // Call Relative operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for CALLR operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("CALLR requires one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            cycles += Internal_Push(pc);
+
+            MemoryResult addressRead = GetOperandValue(operation.Operand1, operation.OperandSize);
+            cycles += addressRead.Cycles;
+
+            int displacement = (ushort)addressRead.Value;
+            pc = (uint)((int)pc + displacement);
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
+    // Return
     private int Execute_RET(DecodedOperation operation)
     {
-        // Return operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RET operation
+        if (operation.Operand2 is not null)
+        {
+            // RET is weird. Has a register select field that isn't used because
+            // it's in the B-Type encoding group
+            throw new ArgumentException("RET requires zero or one operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        if (IsConditionTrue(operation.Condition))
+        {
+            MemoryResult popRead = Internal_Pop();
+            cycles += popRead.Cycles;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+        }
+
+        return cycles;
     }
 
     private int Execute_RETI(DecodedOperation operation)
@@ -2789,16 +2904,62 @@ internal partial class CPU
         return operation.FetchCycles + 1; // Example cycle count for RETN operation
     }
 
+    // Decrement B, Jump if Not Zero
     private int Execute_DJNZ(DecodedOperation operation)
     {
-        // Decrement and Jump if Not Zero operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for DJNZ operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("DJNZ requires one operand");
+        }
+
+        if (operation.Operand1.Immediate is null)
+        {
+            throw new ArgumentException("DJNZ requires one immediate operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        ushort b = (ushort)Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
+        b--;
+        Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
+
+        if (b != 0)
+        {
+            int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc += (byte)operation.Operand1.Immediate.Value;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
+    // Jump if A Not Zero
     private int Execute_JANZ(DecodedOperation operation)
     {
-        // Jump if A is Not Zero operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for JANZ operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("JANZ requires one operand");
+        }
+
+        if (operation.Operand1.Immediate is null)
+        {
+            throw new ArgumentException("JANZ requires one immediate operand");
+        }
+
+        int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+        ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+
+        if (a != 0)
+        {
+            int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+            pc += (byte)operation.Operand1.Immediate.Value;
+            Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+            cycles += 2;
+        }
+
+        return cycles;
     }
 
     private int Execute_RST(DecodedOperation operation)
@@ -3083,6 +3244,7 @@ internal partial class CPU
 
         return cycles;
     }
+
     private int Internal_Block_OUT(Constants.OperandSize size, bool increment)
     {
         int cycles = 0;
@@ -3253,6 +3415,7 @@ internal partial class CPU
 
         return cycles;
     }
+
     private int Internal_Block_Loop(DecodedOperation operation)
     {
         // If PV == 1 (BC != 0), continue
@@ -3287,5 +3450,34 @@ internal partial class CPU
 
         // Otherwise, done. Advance normally.
         return 0;
+    }
+
+    private int Internal_Push(uint value)
+    {
+        int cycles = 0;
+
+        uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+
+        sp -= 4;
+        MemoryResult pushWrite = WriteMemory(sp, Constants.OperandSize.DWord, value);
+        cycles += pushWrite.Cycles;
+
+        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, sp);
+        cycles += 2;
+
+        return cycles;
+    }
+
+    private MemoryResult Internal_Pop()
+    {
+        uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+
+        MemoryResult popRead = ReadMemory(sp, Constants.OperandSize.DWord);
+
+        sp += 4;
+        Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, sp);
+        popRead.Cycles += 2;
+
+        return popRead;
     }
 }
