@@ -11,17 +11,22 @@ internal partial class CPU
 
     private int Execute_Interrupt(DecodedOperation operation)
     {
-        // Interrupt handling logic would go here
-        return operation.FetchCycles + 7; // Example cycle count for interrupt handling
+        if (Registers.GetFlag(Constants.FlagMasks.EnableInterrupts))
+        {
+            // if (_interruptMode == 1)
+            return Internal_ServiceInterrupt(1);
+        }
+
+        return operation.FetchCycles;
     }
 
     private int Execute_NonMaskableInterrupt(DecodedOperation operation)
     {
-        // NMI handling logic would go here
-        return operation.FetchCycles + 11; // Example cycle count for NMI handling
+        Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
+        return Internal_ServiceInterrupt(2);
     }
 
-    // Spin
+    // Do Nothing
     private int Execute_HaltState(DecodedOperation operation)
     {
         return 4;
@@ -582,7 +587,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -666,7 +671,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -753,7 +758,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -837,7 +842,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -944,7 +949,7 @@ internal partial class CPU
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1022,7 +1027,7 @@ internal partial class CPU
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1175,7 +1180,7 @@ internal partial class CPU
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1253,7 +1258,7 @@ internal partial class CPU
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
 
-        uint result = 0;
+        uint result;
 
         switch (operation.OperandSize)
         {
@@ -1298,7 +1303,7 @@ internal partial class CPU
         MemoryResult operandRead = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operandRead.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1540,7 +1545,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1618,7 +1623,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1696,7 +1701,7 @@ internal partial class CPU
         MemoryResult operand2Read = GetOperandValue(operation.Operand2, operation.OperandSize);
         cycles += operand2Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -1792,7 +1797,7 @@ internal partial class CPU
         MemoryResult operand1Read = GetOperandValue(operation.Operand1, operation.OperandSize);
         cycles += operand1Read.Cycles;
 
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (operation.OperandSize)
@@ -2964,8 +2969,17 @@ internal partial class CPU
 
     private int Execute_RST(DecodedOperation operation)
     {
-        // Restart operation logic would go here
-        return operation.FetchCycles + 1; // Example cycle count for RST operation
+        if (operation.Operand1 is null || operation.Operand2 is not null)
+        {
+            throw new ArgumentException("RST requires one operand");
+        }
+
+        if (operation.Operand1.Immediate is null)
+        {
+            throw new ArgumentException("RST requires one immediate operand");
+        }
+
+        return operation.FetchCycles + Internal_ServiceInterrupt((byte)operation.Operand1.Immediate);
     }
 
     // Set Carry Flag
@@ -3256,7 +3270,7 @@ internal partial class CPU
         MemoryResult readHL = ReadMemory(hl, size);
         cycles += readHL.Cycles;
 
-        MemoryResult writeIO = WriteMemory(hl, size, readHL.Value, useIO: true);
+        MemoryResult writeIO = WriteMemory(c, size, readHL.Value, useIO: true);
         cycles += writeIO.Cycles;
 
         cycles++; // Extra cycle for increment/decrement logic
@@ -3297,7 +3311,7 @@ internal partial class CPU
     private int Internal_CP(uint a, uint b, Constants.OperandSize size)
     {
         int cycles = 0;
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (size)
@@ -3360,7 +3374,7 @@ internal partial class CPU
     private int Internal_TST(uint a, uint b, Constants.OperandSize size)
     {
         int cycles = 0;
-        uint result = 0;
+        uint result;
         ALUFlagState flagState = GetALUFlags();
 
         switch (size)
@@ -3479,5 +3493,23 @@ internal partial class CPU
         popRead.Cycles += 2;
 
         return popRead;
+    }
+
+    private int Internal_ServiceInterrupt(byte interruptNumber)
+    {
+        int cycles = 0;
+
+        uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+        cycles += Internal_Push(pc);
+
+        uint vectorAddress = Registers.GetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord) << 10;
+        vectorAddress |= ((uint)interruptNumber << 2);
+
+        MemoryResult vectorReadResult = ReadMemory(vectorAddress, Constants.OperandSize.DWord);
+
+        cycles += vectorReadResult.Cycles;
+        Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, vectorReadResult.Value);
+
+        return cycles;
     }
 }
