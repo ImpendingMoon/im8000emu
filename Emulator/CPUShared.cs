@@ -54,7 +54,7 @@ internal partial class CPU
     {
         var result = new MemoryResult()
         {
-            Value = 0
+            Value = 0,
         };
 
         bool aligned = address % 2 == 0;
@@ -255,7 +255,7 @@ internal partial class CPU
             Constants.Condition.P => !Registers.GetFlag(Constants.FlagMasks.Sign),
             Constants.Condition.N => Registers.GetFlag(Constants.FlagMasks.Sign),
             Constants.Condition.Unconditional => true,
-            _ => throw new ArgumentException($"IsConditionTrue is not implemented for condition {condition}")
+            _ => throw new ArgumentException($"IsConditionTrue is not implemented for condition {condition}"),
         };
     }
 

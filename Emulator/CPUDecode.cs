@@ -13,7 +13,7 @@ internal partial class CPU
     {
         var decodedOperation = new DecodedOperation
         {
-            BaseAddress = address
+            BaseAddress = address,
         };
 
         MemoryResult fetchResult = ReadMemory(address, Constants.OperandSize.Word);
@@ -154,7 +154,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = false,
-            Displacement = null
+            Displacement = null,
         };
 
         byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
@@ -173,7 +173,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = false,
-            Displacement = null
+            Displacement = null,
         };
 
         byte operand2Selector = (byte)(instructionWord >> 13);
@@ -246,7 +246,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = true,
-            Displacement = null
+            Displacement = null,
         };
 
         byte indirectOperandSelector = (byte)(instructionWord >> 13);
@@ -270,7 +270,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = false,
-            Displacement = null
+            Displacement = null,
         };
 
         // ISA DESIGN NOTE:
@@ -357,7 +357,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = false,
-            Displacement = null
+            Displacement = null,
         };
 
         byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
@@ -419,7 +419,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = true,
-            Displacement = null
+            Displacement = null,
         };
 
         byte operand1Selector = (byte)(instructionWord >> 13);
@@ -489,7 +489,7 @@ internal partial class CPU
             Target = null,
             Immediate = null,
             Indirect = false,
-            Displacement = null
+            Displacement = null,
         };
 
         byte operand1Selector = (byte)(instructionWord >> 13);
@@ -598,7 +598,7 @@ internal partial class CPU
                         Target = null,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
                     decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.Byte);
 
@@ -642,7 +642,7 @@ internal partial class CPU
                         Target = null,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
                     decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.DWord);
                 }
@@ -655,7 +655,7 @@ internal partial class CPU
                         Target = Constants.RegisterTargets.R,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
 
                     decodedOperation.Operand2 = new Operand
@@ -663,7 +663,7 @@ internal partial class CPU
                         Target = Constants.RegisterTargets.A,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
                 }
                 else if (decodedOperation.Operation == Constants.Operation.LD_A_R)
@@ -674,14 +674,14 @@ internal partial class CPU
                         Target = Constants.RegisterTargets.A,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
                     decodedOperation.Operand2 = new Operand
                     {
                         Target = Constants.RegisterTargets.R,
                         Immediate = null,
                         Indirect = false,
-                        Displacement = null
+                        Displacement = null,
                     };
                 }
                 break;
@@ -733,7 +733,7 @@ internal partial class CPU
                 Target = null,
                 Immediate = decodedOperation.Opcode[1],
                 Indirect = false,
-                Displacement = null
+                Displacement = null,
             };
         }
         // Discard unused byte

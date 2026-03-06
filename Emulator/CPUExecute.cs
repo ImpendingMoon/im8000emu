@@ -3067,7 +3067,7 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Internal_Block_LD is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Internal_Block_LD is not implemented for OperandSize {size}"),
         };
 
         if (increment)
@@ -3120,7 +3120,7 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Block_CP is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Block_CP is not implemented for OperandSize {size}"),
         };
 
         if (increment)
@@ -3168,7 +3168,7 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Block_TST is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Block_TST is not implemented for OperandSize {size}"),
         };
 
         if (increment)
@@ -3217,7 +3217,7 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Internal_Block_IN is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Internal_Block_IN is not implemented for OperandSize {size}"),
         };
 
         if (increment)
@@ -3266,7 +3266,7 @@ internal partial class CPU
             Constants.OperandSize.Byte => 1,
             Constants.OperandSize.Word => 2,
             Constants.OperandSize.DWord => 4,
-            _ => throw new Exception($"Internal_Block_OUT is not implemented for OperandSize {size}")
+            _ => throw new Exception($"Internal_Block_OUT is not implemented for OperandSize {size}"),
         };
 
         if (increment)

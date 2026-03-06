@@ -9,10 +9,9 @@ internal class Program
 
         var cpu = new Emulator.CPU(memoryBus, ioBus);
 
-        //cpu.Reset();
+        cpu.Reset();
 
-        // Example: Run a loop of whatever is in memory
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 150; i++)
         {
             try
             {

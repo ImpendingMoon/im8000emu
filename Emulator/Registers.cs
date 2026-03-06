@@ -22,7 +22,7 @@ internal sealed class Registers
             Constants.OperandSize.Byte => _registerData[index],
             Constants.OperandSize.Word => BitConverter.ToUInt16(_registerData, index),
             Constants.OperandSize.DWord => BitConverter.ToUInt32(_registerData, index),
-            _ => throw new ArgumentException($"GetRegister does not support OperandSize {size}")
+            _ => throw new ArgumentException($"GetRegister does not support OperandSize {size}"),
         };
     }
 
