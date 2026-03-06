@@ -14,7 +14,6 @@ internal static class Constants
         AF_, BC_, DE_, HL_, IX_, IY_, SP_,
         // State registers
         PC, I, R,
-        IFF2,
     }
 
     public static readonly Dictionary<RegisterTargets, RegisterTargets> RegisterToAlternate = new()
@@ -51,6 +50,7 @@ internal static class Constants
 
     public enum FlagMasks : ushort
     {
+        EnableInterruptsSave = 0b0000_0010_0000_0000,
         EnableInterrupts = 0b0000_0001_0000_0000,
         Sign = 0b1000_0000,
         Zero = 0b0100_0000,
@@ -73,14 +73,6 @@ internal static class Constants
         P,
         N,
         Unconditional,
-    }
-
-    public enum BranchMode
-    {
-        Relative8,
-        Relative16,
-        Direct,
-        Return,
     }
 
     public enum Operation

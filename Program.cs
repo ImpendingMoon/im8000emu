@@ -4,6 +4,12 @@ internal class Program
 {
     private static void Main(string[] args)
     {
+        if (!BitConverter.IsLittleEndian)
+        {
+            Console.WriteLine("This emulator does not support big-endian architectures.");
+            return;
+        }
+
         var memoryBus = new Emulator.MemoryBus();
         var ioBus = new Emulator.MemoryBus();
 

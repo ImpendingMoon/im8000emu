@@ -5,14 +5,6 @@ namespace im8000emu.Emulator;
 // The IM8000 uses Z80-like registers, but double the width (16/32-bit instead of 8/16-bit).
 internal sealed class Registers
 {
-    public Registers()
-    {
-        if (!BitConverter.IsLittleEndian)
-        {
-            throw new NotSupportedException("This emulator core does not support big-endian architectures.");
-        }
-    }
-
     public uint GetRegister(Constants.RegisterTargets reg, Constants.OperandSize size)
     {
         int index = _registerTargetToArrayPosition[reg];
@@ -80,15 +72,15 @@ internal sealed class Registers
         // Special handling of IFF2 for interrupts
         if (flag == Constants.FlagMasks.EnableInterrupts)
         {
-            SetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte, (byte)(value ? 1 : 0));
+            SetFlag(Constants.FlagMasks.EnableInterruptsSave, value);
         }
     }
 
     // Used in RETN to restore interrupt enabled state
     public void RestoreIFF1()
     {
-        uint iff2 = GetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte);
-        SetFlag(Constants.FlagMasks.EnableInterrupts, iff2 != 0);
+        bool iff2 = GetFlag(Constants.FlagMasks.EnableInterruptsSave);
+        SetFlag(Constants.FlagMasks.EnableInterrupts, iff2);
     }
 
     public void ClearRegisters()
@@ -148,7 +140,7 @@ internal sealed class Registers
         sb.Append($"Z: {GetFlag(Constants.FlagMasks.Zero)} ");
         sb.Append($"S: {GetFlag(Constants.FlagMasks.Sign)} ");
         sb.Append($"IE: {GetFlag(Constants.FlagMasks.EnableInterrupts)} ");
-        sb.Append($"IFF2: {GetRegister(Constants.RegisterTargets.IFF2, Constants.OperandSize.Byte) == 1} ");
+        sb.Append($"IFF2: {GetFlag(Constants.FlagMasks.EnableInterruptsSave)} )) ");
 
         return sb.ToString();
     }
@@ -174,8 +166,8 @@ internal sealed class Registers
         return GetStandardDisplayString();
     }
 
-    // 14 32-bit registers + 32-bit PC + 32-bit I + 16-bit R + boolean IFF2 = 67 bytes
-    private readonly byte[] _registerData = new byte[67];
+    // 14 32-bit registers + 32-bit PC + 32-bit I + 16-bit R = 66 bytes
+    private readonly byte[] _registerData = new byte[66];
 
     // Dict should _always_ map every enumeration in RegisterTargets.
     private static readonly Dictionary<Constants.RegisterTargets, int> _registerTargetToArrayPosition = new()
@@ -225,6 +217,5 @@ internal sealed class Registers
         { Constants.RegisterTargets.PC, 56 },
         { Constants.RegisterTargets.I, 60 },
         { Constants.RegisterTargets.R, 64 },
-        { Constants.RegisterTargets.IFF2, 66 },
     };
 }
