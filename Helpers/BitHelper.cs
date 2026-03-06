@@ -1,6 +1,6 @@
 ﻿namespace im8000emu.Helpers;
 
-internal class BitHelper
+internal static class BitHelper
 {
     public static uint SignExtend(uint value, int bits)
     {
@@ -66,19 +66,19 @@ internal class BitHelper
 
     public static bool WillSubtractionUnderflow(byte a, byte b)
     {
-        byte diff = (byte)(a + b);
+        byte diff = (byte)(a - b);
         return ((a ^ b) & (a ^ diff) & 0x80) != 0;
     }
 
     public static bool WillSubtractionUnderflow(ushort a, ushort b)
     {
-        ushort diff = (ushort)(a + b);
+        ushort diff = (ushort)(a - b);
         return ((a ^ b) & (a ^ diff) & 0x8000) != 0;
     }
 
     public static bool WillSubtractionUnderflow(uint a, uint b)
     {
-        uint diff = (uint)(a + b);
+        uint diff = (uint)(a - b);
         return ((a ^ b) & (a ^ diff) & 0x80000000) != 0;
     }
 
