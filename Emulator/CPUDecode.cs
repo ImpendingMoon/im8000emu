@@ -78,6 +78,11 @@ internal partial class CPU
                 int subgroup = (decodedOperation.Opcode[0] >> 2) & 0b0000011;
                 switch (subgroup)
                 {
+                    case 0b10:
+                    {
+                        DecodeBLType(decodedOperation);
+                        break;
+                    }
                     case 0b11:
                     {
                         DecodeSBType(decodedOperation);
@@ -535,38 +540,6 @@ internal partial class CPU
         // Opcode acts as grouping for functions
         switch (operationSelector)
         {
-            // Block Operations
-            case 0b0000:
-            case 0b0001:
-            {
-                decodedOperation.Operation = functionSelector switch
-                {
-                    0b00000000 => Constants.Operation.LDI,
-                    0b00000001 => Constants.Operation.LDIR,
-                    0b00000010 => Constants.Operation.LDD,
-                    0b00000011 => Constants.Operation.LDDR,
-                    0b00000100 => Constants.Operation.CPI,
-                    0b00000101 => Constants.Operation.CPIR,
-                    0b00000110 => Constants.Operation.CPD,
-                    0b00000111 => Constants.Operation.CPDR,
-                    0b00001000 => Constants.Operation.TSI,
-                    0b00001001 => Constants.Operation.TSIR,
-                    0b00001010 => Constants.Operation.TSD,
-                    0b00001011 => Constants.Operation.TSDR,
-                    0b00001100 => Constants.Operation.INI,
-                    0b00001101 => Constants.Operation.INIR,
-                    0b00001110 => Constants.Operation.IND,
-                    0b00001111 => Constants.Operation.INDR,
-                    0b00010000 => Constants.Operation.OUTI,
-                    0b00010001 => Constants.Operation.OTIR,
-                    0b00010010 => Constants.Operation.OUTD,
-                    0b00010011 => Constants.Operation.OTDR,
-                    _ => throw new InvalidOperationException($"0b{functionSelector:B8} is not a valid Block Operation function selector"),
-                };
-                // 0b0000 = Byte, 0b0001 = Word
-                decodedOperation.OperandSize = operationSelector == 0 ? Constants.OperandSize.Byte : Constants.OperandSize.Word;
-                break;
-            }
             // Exchange
             case 0b0100:
             {
@@ -704,6 +677,50 @@ internal partial class CPU
         {
             decodedOperation.DisplayString = $"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)}";
         }
+    }
+
+    private void DecodeBLType(DecodedOperation decodedOperation)
+    {
+        /* Format BL - Block (Group 11, Subgroup 10)
+         * Field Positions:
+         * - *b0-b1* - Group (11)
+         *  - *b2-b3* - Group (10)
+         *  - *b4-b7* - Opcode
+         *  - *b8-b9* - Size
+         *  - *b10* - Increment/Decrement (0 = Decrement, 1 = Increment)
+         *  - *b11* - Repeat (0 = Once, 1 = Repeat)
+         *  - *b12-b15* - Function
+         */
+
+        // This field was added on after starting the emulator, so all the block instructions are implemented individually.
+        // If we add more block ops I'll structure this better.
+
+        ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
+
+        decodedOperation.Operation = instructionWord switch
+        {
+            0x050B => Constants.Operation.LDI,
+            0x010B => Constants.Operation.LDD,
+            0x0D0B => Constants.Operation.LDIR,
+            0x090B => Constants.Operation.LDDR,
+            0x051B => Constants.Operation.CPI,
+            0x011B => Constants.Operation.CPD,
+            0x0D1B => Constants.Operation.CPIR,
+            0x091B => Constants.Operation.CPDR,
+            0x151B => Constants.Operation.TSI,
+            0x111B => Constants.Operation.TSD,
+            0x1D1B => Constants.Operation.TSIR,
+            0x191B => Constants.Operation.TSDR,
+            0x052B => Constants.Operation.INI,
+            0x012B => Constants.Operation.IND,
+            0x0D2B => Constants.Operation.INIR,
+            0x092B => Constants.Operation.INDR,
+            0x053B => Constants.Operation.OUTI,
+            0x013B => Constants.Operation.OUTD,
+            0x0D3B => Constants.Operation.OTIR,
+            0x093B => Constants.Operation.OTDR,
+            _ => throw new InvalidOperationException($"0b{instructionWord:B16} is not a valid Block operation"),
+        };
     }
 
     private void DecodeSBType(DecodedOperation decodedOperation)

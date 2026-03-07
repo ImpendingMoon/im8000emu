@@ -1,4 +1,6 @@
-﻿namespace im8000emu;
+﻿using im8000emu.Emulator;
+
+namespace im8000emu;
 
 internal class Program
 {
@@ -10,7 +12,24 @@ internal class Program
             return;
         }
 
-        var memoryBus = new Emulator.MemoryBus();
+        if (args.Length < 1)
+        {
+            Console.WriteLine("Usage: im8000emu <ROM file>");
+            return;
+        }
+
+        string filePath = args[0].Trim('"').Trim();
+
+        if (!File.Exists(filePath))
+        {
+            Console.WriteLine($"Could not find file \"{filePath}\"");
+            return;
+        }
+
+        byte[] fileData = File.ReadAllBytes(filePath);
+        var memoryBus = new MemoryBus(fileData, 0x10000);
+
+
         var ioBus = new Emulator.MemoryBus();
 
         var cpu = new Emulator.CPU(memoryBus, ioBus);
