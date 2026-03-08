@@ -1,19 +1,24 @@
-﻿namespace im8000emu.Emulator;
+﻿using System.Buffers.Binary;
+
+namespace im8000emu.Emulator;
 
 // Contains shared private members between CPU.cs, CPUDecode.cs, and CPUExecute.cs
 internal partial class CPU
 {
 	private readonly MemoryBus _ioBus;
 	private readonly MemoryBus _memoryBus;
+
+	// Reusable decode object. Avoids a heap allocation on every fetch.
+	private DecodedOperation _currentOperation;
 	private int _interruptMode = 1;
-	private bool _isHalted = false;
-	private bool _shouldEnableInterrupts = false;
+	private bool _isHalted;
+	private bool _shouldEnableInterrupts;
 
 	private MemoryResult ReadMemory(uint address, Constants.OperandSize size, bool useIO = false)
 	{
-		var result = new MemoryResult();
+		MemoryResult result;
 
-		bool aligned = address % 2 == 0;
+		bool aligned = (address & 1) == 0;
 
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
@@ -29,7 +34,7 @@ internal partial class CPU
 			case Constants.OperandSize.Word:
 			{
 				Span<byte> data = activeBus.ReadByteArray(address, 2);
-				result.Value = BitConverter.ToUInt16(data);
+				result.Value = BinaryPrimitives.ReadUInt16LittleEndian(data);
 				result.Cycles = aligned ? 1 : 2;
 				break;
 			}
@@ -37,7 +42,7 @@ internal partial class CPU
 			case Constants.OperandSize.DWord:
 			{
 				Span<byte> data = activeBus.ReadByteArray(address, 4);
-				result.Value = BitConverter.ToUInt32(data);
+				result.Value = BinaryPrimitives.ReadUInt32LittleEndian(data);
 				result.Cycles = aligned ? 2 : 3;
 				break;
 			}
@@ -55,12 +60,10 @@ internal partial class CPU
 
 	private MemoryResult WriteMemory(uint address, Constants.OperandSize size, uint value, bool useIO = false)
 	{
-		var result = new MemoryResult
-		{
-			Value = 0,
-		};
+		MemoryResult result;
+		result.Value = 0;
 
-		bool aligned = address % 2 == 0;
+		bool aligned = (address & 1) == 0;
 
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
@@ -75,7 +78,8 @@ internal partial class CPU
 
 			case Constants.OperandSize.Word:
 			{
-				byte[] bytes = BitConverter.GetBytes(value);
+				Span<byte> bytes = stackalloc byte[2];
+				BinaryPrimitives.WriteUInt16LittleEndian(bytes, (ushort)value);
 				activeBus.WriteByteArray(address, bytes);
 				result.Cycles = aligned ? 1 : 2;
 				break;
@@ -83,7 +87,8 @@ internal partial class CPU
 
 			case Constants.OperandSize.DWord:
 			{
-				byte[] bytes = BitConverter.GetBytes(value);
+				Span<byte> bytes = stackalloc byte[4];
+				BinaryPrimitives.WriteUInt32LittleEndian(bytes, value);
 				activeBus.WriteByteArray(address, bytes);
 				result.Cycles = aligned ? 2 : 3;
 				break;
@@ -100,18 +105,18 @@ internal partial class CPU
 		return result;
 	}
 
-	private MemoryResult GetOperandValue(Operand operand, Constants.OperandSize size)
+	private MemoryResult GetOperandValue(in Operand operand, Constants.OperandSize size)
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
 			throw new ArgumentException("Either Target or Immediate must have a value");
 		}
 
-		var result = new MemoryResult();
+		MemoryResult result;
 
 		if (operand.Indirect)
 		{
-			uint address = GetEffectiveAddress(operand);
+			uint address = GetEffectiveAddress(in operand);
 			result = ReadMemory(address, size);
 		}
 		else
@@ -120,9 +125,9 @@ internal partial class CPU
 			{
 				result.Value = Registers.GetRegister(operand.Target.Value, size);
 			}
-			else if (operand.Immediate is not null)
+			else
 			{
-				result.Value = operand.Immediate.Value;
+				result.Value = operand.Immediate!.Value;
 			}
 
 			result.Cycles = 0;
@@ -131,18 +136,18 @@ internal partial class CPU
 		return result;
 	}
 
-	private MemoryResult WritebackOperand(Operand operand, Constants.OperandSize size, uint value)
+	private MemoryResult WritebackOperand(in Operand operand, Constants.OperandSize size, uint value)
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
 			throw new ArgumentException("Either Target or Immediate must have a value");
 		}
 
-		var result = new MemoryResult();
+		MemoryResult result;
 
 		if (operand.Indirect)
 		{
-			uint address = GetEffectiveAddress(operand);
+			uint address = GetEffectiveAddress(in operand);
 			result = WriteMemory(address, size, value);
 		}
 		else
@@ -153,20 +158,16 @@ internal partial class CPU
 			}
 
 			Registers.SetRegister(operand.Target.Value, size, value);
+			result.Value = 0;
 			result.Cycles = 0;
 		}
 
 		return result;
 	}
 
-	private uint GetEffectiveAddress(Operand operand)
+	private uint GetEffectiveAddress(in Operand operand)
 	{
-		uint address = 0;
-
-		if (operand.Target is null && operand.Immediate is null)
-		{
-			throw new ArgumentException("Either Target or Immediate must have a value");
-		}
+		uint address;
 
 		if (operand.Target is not null)
 		{
@@ -175,6 +176,10 @@ internal partial class CPU
 		else if (operand.Immediate is not null)
 		{
 			address = operand.Immediate.Value;
+		}
+		else
+		{
+			throw new ArgumentException("Either Target or Immediate must have a value");
 		}
 
 		if (operand.Displacement is not null)
@@ -198,54 +203,22 @@ internal partial class CPU
 		Registers.SetRegister(register, Constants.OperandSize.Word, alternateValue);
 	}
 
-	private uint FetchImmediate(DecodedOperation decodedOperation, Constants.OperandSize size)
+	// ref parameter: DecodedOperation is now a struct, so we must pass by ref to mutate FetchCycles/OpcodeLength
+	private uint FetchImmediate(ref DecodedOperation decodedOperation, Constants.OperandSize size)
 	{
 		MemoryResult immediateFetch = ReadMemory(
-			(uint)(decodedOperation.BaseAddress + decodedOperation.Opcode.Count),
+			(uint)(decodedOperation.BaseAddress + decodedOperation.OpcodeLength),
 			size
 		);
 		decodedOperation.FetchCycles += immediateFetch.Cycles;
-		AddValueToOpcode(decodedOperation.Opcode, size, immediateFetch.Value);
-		return immediateFetch.Value;
-	}
-
-	private static void AddValueToOpcode(List<byte> opcode, Constants.OperandSize size, uint value)
-	{
-		byte[] immediateBytes = BitConverter.GetBytes(value);
-
-		switch (size)
+		decodedOperation.OpcodeLength += size switch
 		{
-			case Constants.OperandSize.Byte:
-			{
-				opcode.Add(immediateBytes[0]);
-				break;
-			}
-
-			case Constants.OperandSize.Word:
-			{
-				opcode.AddRange(immediateBytes[..2]);
-				break;
-			}
-
-			case Constants.OperandSize.DWord:
-			{
-				opcode.AddRange(immediateBytes);
-				break;
-			}
-
-			default: throw new ArgumentException($"{size} is not a valid operand size");
-		}
-	}
-
-	private static string GetOperationString(Constants.Operation operation, Constants.OperandSize size)
-	{
-		return size switch
-		{
-			Constants.OperandSize.Byte => $"{operation}.B",
-			Constants.OperandSize.Word => $"{operation}.W",
-			Constants.OperandSize.DWord => $"{operation}.D",
+			Constants.OperandSize.Byte => 1,
+			Constants.OperandSize.Word => 2,
+			Constants.OperandSize.DWord => 4,
 			_ => throw new ArgumentException($"{size} is not a valid operand size"),
 		};
+		return immediateFetch.Value;
 	}
 
 	private bool IsConditionTrue(Constants.Condition condition)

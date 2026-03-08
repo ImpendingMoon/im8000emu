@@ -1,191 +1,107 @@
-﻿using System.Text;
+﻿using System.Buffers.Binary;
+using System.Text;
 
 namespace im8000emu.Emulator;
 
 // The IM8000 uses Z80-like registers, but double the width (16/32-bit instead of 8/16-bit).
 internal sealed class Registers
 {
-	// Dict should _always_ map every enumeration in RegisterTargets.
-	private static readonly Dictionary<Constants.RegisterTargets, int> _registerTargetToArrayPosition = new()
-	{
-		{
-			Constants.RegisterTargets.F, 0
-		},
-		{
-			Constants.RegisterTargets.A, 2
-		},
-		{
-			Constants.RegisterTargets.C, 4
-		},
-		{
-			Constants.RegisterTargets.B, 6
-		},
-		{
-			Constants.RegisterTargets.E, 8
-		},
-		{
-			Constants.RegisterTargets.D, 10
-		},
-		{
-			Constants.RegisterTargets.L, 12
-		},
-		{
-			Constants.RegisterTargets.H, 14
-		},
-		{
-			Constants.RegisterTargets.IXL, 16
-		},
-		{
-			Constants.RegisterTargets.IXH, 18
-		},
-		{
-			Constants.RegisterTargets.IYL, 20
-		},
-		{
-			Constants.RegisterTargets.IYH, 22
-		},
-		{
-			Constants.RegisterTargets.SPL, 24
-		},
-		{
-			Constants.RegisterTargets.SPH, 26
-		},
-		{
-			Constants.RegisterTargets.F_, 28
-		},
-		{
-			Constants.RegisterTargets.A_, 30
-		},
-		{
-			Constants.RegisterTargets.C_, 32
-		},
-		{
-			Constants.RegisterTargets.B_, 34
-		},
-		{
-			Constants.RegisterTargets.E_, 36
-		},
-		{
-			Constants.RegisterTargets.D_, 38
-		},
-		{
-			Constants.RegisterTargets.L_, 40
-		},
-		{
-			Constants.RegisterTargets.H_, 42
-		},
-		{
-			Constants.RegisterTargets.IXL_, 44
-		},
-		{
-			Constants.RegisterTargets.IXH_, 46
-		},
-		{
-			Constants.RegisterTargets.IYL_, 48
-		},
-		{
-			Constants.RegisterTargets.IYH_, 50
-		},
-		{
-			Constants.RegisterTargets.SPL_, 52
-		},
-		{
-			Constants.RegisterTargets.SPH_, 54
-		},
-		{
-			Constants.RegisterTargets.AF, 0
-		},
-		{
-			Constants.RegisterTargets.BC, 4
-		},
-		{
-			Constants.RegisterTargets.DE, 8
-		},
-		{
-			Constants.RegisterTargets.HL, 12
-		},
-		{
-			Constants.RegisterTargets.IX, 16
-		},
-		{
-			Constants.RegisterTargets.IY, 20
-		},
-		{
-			Constants.RegisterTargets.SP, 24
-		},
-		{
-			Constants.RegisterTargets.AF_, 28
-		},
-		{
-			Constants.RegisterTargets.BC_, 32
-		},
-		{
-			Constants.RegisterTargets.DE_, 36
-		},
-		{
-			Constants.RegisterTargets.HL_, 40
-		},
-		{
-			Constants.RegisterTargets.IX_, 44
-		},
-		{
-			Constants.RegisterTargets.IY_, 48
-		},
-		{
-			Constants.RegisterTargets.SP_, 52
-		},
-		{
-			Constants.RegisterTargets.PC, 56
-		},
-		{
-			Constants.RegisterTargets.I, 60
-		},
-		{
-			Constants.RegisterTargets.R, 64
-		},
-	};
+	private static readonly int[] _registerOffsets;
 
 	// 14 32-bit registers + 32-bit PC + 32-bit I + 16-bit R = 66 bytes
 	private readonly byte[] _registerData = new byte[66];
 
+	static Registers()
+	{
+		int count = (int)Constants.RegisterTargets.R + 1;
+		_registerOffsets = new int[count];
+
+		_registerOffsets[(int)Constants.RegisterTargets.F] = 0;
+		_registerOffsets[(int)Constants.RegisterTargets.A] = 2;
+		_registerOffsets[(int)Constants.RegisterTargets.C] = 4;
+		_registerOffsets[(int)Constants.RegisterTargets.B] = 6;
+		_registerOffsets[(int)Constants.RegisterTargets.E] = 8;
+		_registerOffsets[(int)Constants.RegisterTargets.D] = 10;
+		_registerOffsets[(int)Constants.RegisterTargets.L] = 12;
+		_registerOffsets[(int)Constants.RegisterTargets.H] = 14;
+		_registerOffsets[(int)Constants.RegisterTargets.IXL] = 16;
+		_registerOffsets[(int)Constants.RegisterTargets.IXH] = 18;
+		_registerOffsets[(int)Constants.RegisterTargets.IYL] = 20;
+		_registerOffsets[(int)Constants.RegisterTargets.IYH] = 22;
+		_registerOffsets[(int)Constants.RegisterTargets.SPL] = 24;
+		_registerOffsets[(int)Constants.RegisterTargets.SPH] = 26;
+
+		_registerOffsets[(int)Constants.RegisterTargets.F_] = 28;
+		_registerOffsets[(int)Constants.RegisterTargets.A_] = 30;
+		_registerOffsets[(int)Constants.RegisterTargets.C_] = 32;
+		_registerOffsets[(int)Constants.RegisterTargets.B_] = 34;
+		_registerOffsets[(int)Constants.RegisterTargets.E_] = 36;
+		_registerOffsets[(int)Constants.RegisterTargets.D_] = 38;
+		_registerOffsets[(int)Constants.RegisterTargets.L_] = 40;
+		_registerOffsets[(int)Constants.RegisterTargets.H_] = 42;
+		_registerOffsets[(int)Constants.RegisterTargets.IXL_] = 44;
+		_registerOffsets[(int)Constants.RegisterTargets.IXH_] = 46;
+		_registerOffsets[(int)Constants.RegisterTargets.IYL_] = 48;
+		_registerOffsets[(int)Constants.RegisterTargets.IYH_] = 50;
+		_registerOffsets[(int)Constants.RegisterTargets.SPL_] = 52;
+		_registerOffsets[(int)Constants.RegisterTargets.SPH_] = 54;
+
+		// 32-bit register views (aliased into the same byte positions as their halves)
+		_registerOffsets[(int)Constants.RegisterTargets.AF] = 0;
+		_registerOffsets[(int)Constants.RegisterTargets.BC] = 4;
+		_registerOffsets[(int)Constants.RegisterTargets.DE] = 8;
+		_registerOffsets[(int)Constants.RegisterTargets.HL] = 12;
+		_registerOffsets[(int)Constants.RegisterTargets.IX] = 16;
+		_registerOffsets[(int)Constants.RegisterTargets.IY] = 20;
+		_registerOffsets[(int)Constants.RegisterTargets.SP] = 24;
+
+		_registerOffsets[(int)Constants.RegisterTargets.AF_] = 28;
+		_registerOffsets[(int)Constants.RegisterTargets.BC_] = 32;
+		_registerOffsets[(int)Constants.RegisterTargets.DE_] = 36;
+		_registerOffsets[(int)Constants.RegisterTargets.HL_] = 40;
+		_registerOffsets[(int)Constants.RegisterTargets.IX_] = 44;
+		_registerOffsets[(int)Constants.RegisterTargets.IY_] = 48;
+		_registerOffsets[(int)Constants.RegisterTargets.SP_] = 52;
+
+		_registerOffsets[(int)Constants.RegisterTargets.PC] = 56;
+		_registerOffsets[(int)Constants.RegisterTargets.I] = 60;
+		_registerOffsets[(int)Constants.RegisterTargets.R] = 64;
+	}
+
 	public uint GetRegister(Constants.RegisterTargets reg, Constants.OperandSize size)
 	{
-		int index = _registerTargetToArrayPosition[reg];
+		int i = _registerOffsets[(int)reg];
 
 		return size switch
 		{
-			Constants.OperandSize.Byte => _registerData[index],
-			Constants.OperandSize.Word => BitConverter.ToUInt16(_registerData, index),
-			Constants.OperandSize.DWord => BitConverter.ToUInt32(_registerData, index),
+			Constants.OperandSize.Byte => _registerData[i],
+			Constants.OperandSize.Word => BinaryPrimitives.ReadUInt16LittleEndian(_registerData.AsSpan(i)),
+			Constants.OperandSize.DWord => BinaryPrimitives.ReadUInt32LittleEndian(_registerData.AsSpan(i)),
 			_ => throw new ArgumentException($"GetRegister does not support OperandSize {size}"),
 		};
 	}
 
 	public void SetRegister(Constants.RegisterTargets reg, Constants.OperandSize size, uint value)
 	{
-		int index = _registerTargetToArrayPosition[reg];
+		int i = _registerOffsets[(int)reg];
 
 		switch (size)
 		{
 			case Constants.OperandSize.Byte:
 			{
-				_registerData[index] = (byte)value;
+				_registerData[i] = (byte)value;
 				break;
 			}
 
 			case Constants.OperandSize.Word:
 			{
-				int position = _registerTargetToArrayPosition[reg];
-				byte[] bytes = BitConverter.GetBytes(value);
-				Array.Copy(bytes, 0, _registerData, position, 2);
+				BinaryPrimitives.WriteUInt16LittleEndian(_registerData.AsSpan(i), (ushort)value);
 				break;
 			}
 
 			case Constants.OperandSize.DWord:
 			{
-				int position = _registerTargetToArrayPosition[reg];
-				byte[] bytes = BitConverter.GetBytes(value);
-				Array.Copy(bytes, 0, _registerData, position, 4);
+				BinaryPrimitives.WriteUInt32LittleEndian(_registerData.AsSpan(i), value);
 				break;
 			}
 		}
@@ -193,24 +109,24 @@ internal sealed class Registers
 
 	public bool GetFlag(Constants.FlagMasks flag)
 	{
-		ushort flags = (ushort)GetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word);
-		return (flags & (ushort)flag) != 0;
+		uint flags = BinaryPrimitives.ReadUInt16LittleEndian(_registerData.AsSpan(0));
+		return (flags & (uint)flag) != 0;
 	}
 
 	public void SetFlag(Constants.FlagMasks flag, bool value)
 	{
-		ushort flags = (ushort)GetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word);
+		uint flags = BinaryPrimitives.ReadUInt16LittleEndian(_registerData.AsSpan(0));
 
 		if (value)
 		{
-			flags |= (ushort)flag;
+			flags |= (uint)flag;
 		}
 		else
 		{
-			flags &= (ushort)~flag;
+			flags &= ~(uint)flag;
 		}
 
-		SetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word, flags);
+		BinaryPrimitives.WriteUInt16LittleEndian(_registerData.AsSpan(0), (ushort)flags);
 	}
 
 	public void ClearRegisters()

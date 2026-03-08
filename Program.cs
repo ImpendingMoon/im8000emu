@@ -1,5 +1,4 @@
-﻿using im8000emu.Emulator;
-using im8000emu.Emulator.Devices;
+﻿using System.Diagnostics;
 
 namespace im8000emu;
 
@@ -9,13 +8,13 @@ internal class Program
 	{
 		if (!BitConverter.IsLittleEndian)
 		{
-			Console.WriteLine("This emulator does not support big-endian architectures.");
+			Console.Error.WriteLine("This emulator does not support big-endian architectures.");
 			return;
 		}
 
 		if (args.Length < 1)
 		{
-			Console.WriteLine("Usage: im8000emu <ROM file>");
+			Console.Error.WriteLine("Usage: im8000emu <ROM file>");
 			return;
 		}
 
@@ -23,50 +22,37 @@ internal class Program
 
 		if (!File.Exists(filePath))
 		{
-			Console.WriteLine($"Could not find file \"{filePath}\"");
+			Console.Error.WriteLine($"Could not find file \"{filePath}\"");
 			return;
 		}
 
-		byte[] fileData = File.ReadAllBytes(filePath);
-		var memoryBus = new MemoryBus();
-		memoryBus.Map(0x0000_0000_0000, new MemoryDevice(fileData, fileData.Length, true));
-		memoryBus.Map(0x0000_0020_0000, new MemoryDevice(0x10000));
+		byte[] romData = File.ReadAllBytes(filePath);
+		var system = new EmulatedSystem(romData);
 
-		var ioBus = new MemoryBus();
-		ioBus.Map(0x0000_0000_0000, new ConsoleDevice());
+		Console.WriteLine($"im8000emu - {Config.CpuSpeedHz / 1_000_000} MHz, {Config.TargetFramerate} fps target");
+		Console.WriteLine($"ROM: {filePath} ({romData.Length:N0} bytes)");
+		Console.WriteLine();
 
-		var cpu = new CPU(memoryBus, ioBus);
+		double frameIntervalMs = 1000.0 / Config.TargetFramerate;
+		var stopwatch = new Stopwatch();
 
-		cpu.Reset();
-
-		for (;;)
+		while (true)
 		{
-			try
+			stopwatch.Restart();
+
+			system.RunFrame();
+
+			double elapsedMs = stopwatch.ElapsedMilliseconds;
+			double sleepMs = frameIntervalMs - elapsedMs;
+
+			if (sleepMs > 0)
 			{
-				DecodedOperation operation = cpu.Decode();
-
-				// Console.WriteLine(
-				// 	$"Executing: [{BitConverter.ToString(operation.Opcode.ToArray())}] {operation.DisplayString} at address 0x{cpu.Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord):X8}"
-				// );
-
-				int cycles = cpu.Execute(operation);
-				// Console.WriteLine($"T-cycles taken: {cycles}");
-				// Console.WriteLine(cpu.Registers.GetFullDisplayString());
-
-				// Let's not melt my CPU
-				// Thread.Sleep(10);
+				Thread.Sleep((int)sleepMs);
 			}
-			catch (Exception ex)
+			else
 			{
-				Console.WriteLine($"Exception during execution: {ex.Message}");
-
-				// Advance PC to avoid infinite loop.
-				uint pc = cpu.Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
-				pc += 2;
-				cpu.Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+				Console.WriteLine("Emulator overloaded!");
 			}
-
-			// Console.WriteLine();
 		}
 	}
 }

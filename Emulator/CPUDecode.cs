@@ -11,55 +11,54 @@ internal partial class CPU
 	/// <param name="address">Base address of the opcode</param>
 	public DecodedOperation Decode(uint address)
 	{
-		var decodedOperation = new DecodedOperation
-		{
-			BaseAddress = address,
-		};
+		_currentOperation.Reset();
+		_currentOperation.BaseAddress = address;
 
 		MemoryResult fetchResult = ReadMemory(address, Constants.OperandSize.Word);
-		decodedOperation.Opcode = BitConverter.GetBytes((ushort)fetchResult.Value).ToList();
-		decodedOperation.FetchCycles = fetchResult.Cycles;
+		ushort instructionWord = (ushort)fetchResult.Value;
+		_currentOperation.FetchCycles = fetchResult.Cycles;
+		_currentOperation.OpcodeLength = 2;
 
-		int group = decodedOperation.Opcode[0] & 0b00000011;
+		int group = instructionWord & 0b00000011;
 
 		switch (group)
 		{
 			case 0b00:
 			{
-				DecodeRType(decodedOperation);
+				DecodeRType(ref _currentOperation, instructionWord);
 				break;
 			}
 
 			case 0b01:
 			{
-				DecodeRMType(decodedOperation);
+				DecodeRMType(ref _currentOperation, instructionWord);
 				break;
 			}
 
 			case 0b10:
 			{
 				// Sub-Grouped Instructions
-				int subgroup = (decodedOperation.Opcode[0] >> 2) & 0b0000011;
+				int subgroup = (instructionWord >> 2) & 0b0000011;
 				switch (subgroup)
 				{
 					case 0b00:
 					{
-						DecodeURType(decodedOperation);
+						DecodeURType(ref _currentOperation, instructionWord);
 						break;
 					}
 					case 0b01:
 					{
-						DecodeUMType(decodedOperation);
+						DecodeUMType(ref _currentOperation, instructionWord);
 						break;
 					}
 					case 0b10:
 					{
-						DecodeBType(decodedOperation);
+						DecodeBType(ref _currentOperation, instructionWord);
 						break;
 					}
 					case 0b11:
 					{
-						DecodeNType(decodedOperation);
+						DecodeNType(ref _currentOperation, instructionWord);
 						break;
 					}
 					default:
@@ -74,24 +73,24 @@ internal partial class CPU
 
 			case 0b11:
 			{
-				// Variable Length Instructions
-				int subgroup = (decodedOperation.Opcode[0] >> 2) & 0b0000011;
+				// Special Instructions
+				int subgroup = (instructionWord >> 2) & 0b0000011;
 				switch (subgroup)
 				{
 					case 0b10:
 					{
-						DecodeBLType(decodedOperation);
+						DecodeBLType(ref _currentOperation, instructionWord);
 						break;
 					}
 					case 0b11:
 					{
-						DecodeSBType(decodedOperation);
+						DecodeSBType(ref _currentOperation, instructionWord);
 						break;
 					}
 					default:
 					{
 						// Other groups are reserved for expansion.
-						throw new InvalidOperationException("Invalid variable-length instruction subgroup.");
+						throw new InvalidOperationException("Invalid special instruction subgroup.");
 					}
 				}
 				break;
@@ -104,10 +103,10 @@ internal partial class CPU
 			}
 		}
 
-		return decodedOperation;
+		return _currentOperation;
 	}
 
-	private void DecodeRType(DecodedOperation decodedOperation)
+	private void DecodeRType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format R - Register-Register - (Group 00)
 		 * Field Positions:
@@ -117,8 +116,6 @@ internal partial class CPU
 		 * - b10-b12 - Destination Register (3 bits)
 		 * - b13-b15 - Source Register (3 bits)
 		 */
-
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
 
 		// Decode operation
 		byte operationSelector = (byte)((instructionWord >> 2) & 0b00111111);
@@ -155,46 +152,37 @@ internal partial class CPU
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
 		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
 
-		// Decode targets
-		decodedOperation.Operand1 = new Operand
-		{
-			Target = null,
-			Immediate = null,
-			Indirect = false,
-			Displacement = null,
-		};
-
+		// Decode destination
 		byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
 
 		if (operand1Selector == 0b111)
 		{
 			throw new InvalidOperationException("0b111 is not a valid destination target");
 		}
-		decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
-
-		decodedOperation.Operand2 = new Operand
+		decodedOperation.Operand1 = new Operand
 		{
-			Target = null,
-			Immediate = null,
-			Indirect = false,
-			Displacement = null,
+			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
 		};
 
+		// Decode source
 		byte operand2Selector = (byte)(instructionWord >> 13);
 		if (operand2Selector == 0b111)
 		{
-			decodedOperation.Operand2.Immediate = FetchImmediate(decodedOperation, decodedOperation.OperandSize);
+			decodedOperation.Operand2 = new Operand
+			{
+				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize),
+			};
 		}
 		else
 		{
-			decodedOperation.Operand2.Target = DecodeRegisterTarget(operand2Selector, decodedOperation.OperandSize);
+			decodedOperation.Operand2 = new Operand
+			{
+				Target = DecodeRegisterTarget(operand2Selector, decodedOperation.OperandSize),
+			};
 		}
-
-		decodedOperation.DisplayString =
-			$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
 	}
 
-	private void DecodeRMType(DecodedOperation decodedOperation)
+	private void DecodeRMType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format RM - Register-Memory - (Group 01)
 		 * Field Positions:
@@ -205,8 +193,6 @@ internal partial class CPU
 		 * - b10-b12 - Register (3 bits)
 		 * - b13-b15 - Address register (3 bits)
 		 */
-
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
 
 		// Decode operation
 		byte operationSelector = (byte)((instructionWord >> 2) & 0b00011111);
@@ -247,19 +233,16 @@ internal partial class CPU
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
 		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
 
-		// Decode targets
+		// Decode indirect (address) operand
 		var indirectOperand = new Operand
 		{
-			Target = null,
-			Immediate = null,
 			Indirect = true,
-			Displacement = null,
 		};
 
 		byte indirectOperandSelector = (byte)(instructionWord >> 13);
 		if (indirectOperandSelector == 0b111)
 		{
-			indirectOperand.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.DWord);
+			indirectOperand.Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord);
 		}
 		else
 		{
@@ -268,20 +251,13 @@ internal partial class CPU
 			// IX, IY, SP always have a displacement. Displacements are always before immediate values.
 			if (indirectOperand.Target >= Constants.RegisterTargets.IX)
 			{
-				indirectOperand.Displacement = (short)FetchImmediate(decodedOperation, Constants.OperandSize.Word);
+				indirectOperand.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.OperandSize.Word);
 			}
 		}
 
-		var registerOperand = new Operand
-		{
-			Target = null,
-			Immediate = null,
-			Indirect = false,
-			Displacement = null,
-		};
+		// Decode register operand
+		var registerOperand = new Operand();
 
-		// ISA DESIGN NOTE:
-		// Maybe it's better to swap Address and Register operands so that we decode in the order they appear in the instruction word?
 		byte registerOperandSelector = (byte)((instructionWord >> 10) & 0b00000111);
 
 		if (registerOperandSelector == 0b111)
@@ -297,8 +273,7 @@ internal partial class CPU
 				throw new InvalidOperationException("0b111 is not a valid source target with direct addressing");
 			}
 
-			registerOperand.Immediate = FetchImmediate(decodedOperation, decodedOperation.OperandSize);
-
+			registerOperand.Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize);
 		}
 		else
 		{
@@ -315,12 +290,9 @@ internal partial class CPU
 			decodedOperation.Operand1 = indirectOperand;
 			decodedOperation.Operand2 = registerOperand;
 		}
-
-		decodedOperation.DisplayString =
-			$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
 	}
 
-	private void DecodeURType(DecodedOperation decodedOperation)
+	private void DecodeURType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format UR - Unary Register - (Group 10, Subgroup 00)
 		 * Field Positions:
@@ -332,9 +304,6 @@ internal partial class CPU
 		 * - b13-b15 - Function (3 bits)
 		 */
 
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
-
-		// Decode operation
 		// Operation selector is Opcode + Function. Easier in hardware than in software.
 		byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
 		operationSelector = (byte)(operationSelector << 3);
@@ -364,27 +333,19 @@ internal partial class CPU
 		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
 
 		// Decode target
-		decodedOperation.Operand1 = new Operand
-		{
-			Target = null,
-			Immediate = null,
-			Indirect = false,
-			Displacement = null,
-		};
-
 		byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
 
 		if (operand1Selector == 0b111)
 		{
 			throw new InvalidOperationException("0b111 is not a valid target selector for UR-type instructions");
 		}
-		decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
-
-		decodedOperation.DisplayString =
-			$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
+		decodedOperation.Operand1 = new Operand
+		{
+			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
+		};
 	}
 
-	private void DecodeUMType(DecodedOperation decodedOperation)
+	private void DecodeUMType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format UM - Unary Memory - (Group 10, Subgroup 01)
 		 * Field Positions:
@@ -396,9 +357,6 @@ internal partial class CPU
 		 * - b13-b15 - Address register (3 bits)
 		 */
 
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
-
-		// Decode operation
 		// Operation selector is Opcode + Function. Easier in hardware than in software.
 		byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
 		operationSelector = (byte)(operationSelector << 3);
@@ -425,39 +383,31 @@ internal partial class CPU
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
 		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
 
-		// Decode target
-		decodedOperation.Operand1 = new Operand
+		// Decode target (indirect)
+		var operand1 = new Operand
 		{
-			Target = null,
-			Immediate = null,
 			Indirect = true,
-			Displacement = null,
 		};
 
 		byte operand1Selector = (byte)(instructionWord >> 13);
 		if (operand1Selector == 0b111)
 		{
-			decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.DWord);
+			operand1.Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord);
 		}
 		else
 		{
-			decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, Constants.OperandSize.DWord);
+			operand1.Target = DecodeRegisterTarget(operand1Selector, Constants.OperandSize.DWord);
 			// IX, IY, SP always have a displacement.
-			if (decodedOperation.Operand1.Target >= Constants.RegisterTargets.IX)
+			if (operand1.Target >= Constants.RegisterTargets.IX)
 			{
-				decodedOperation.Operand1.Displacement = (short)FetchImmediate(
-					decodedOperation,
-					Constants.OperandSize.Word
-				);
-
+				operand1.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.OperandSize.Word);
 			}
 		}
 
-		decodedOperation.DisplayString =
-			$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
+		decodedOperation.Operand1 = operand1;
 	}
 
-	private void DecodeBType(DecodedOperation decodedOperation)
+	private void DecodeBType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format B - Branch - (Group 10-10)
 		 *
@@ -468,8 +418,6 @@ internal partial class CPU
 		 * - b9-b12 - Condition (4 bits)
 		 * - b13-b15 - Address register (3 bits)
 		 */
-
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
 
 		// Decode operation
 		byte operationSelector = (byte)((instructionWord >> 4) & 0b00011111);
@@ -502,44 +450,24 @@ internal partial class CPU
 		};
 
 		// Decode target
-		decodedOperation.Operand1 = new Operand
-		{
-			Target = null,
-			Immediate = null,
-			Indirect = false,
-			Displacement = null,
-		};
-
 		byte operand1Selector = (byte)(instructionWord >> 13);
 		if (operand1Selector == 0b111)
 		{
-			decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, decodedOperation.OperandSize);
+			decodedOperation.Operand1 = new Operand
+			{
+				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize),
+			};
 		}
 		else
 		{
-			decodedOperation.Operand1.Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize);
-		}
-
-		if (decodedOperation.Condition == Constants.Condition.Unconditional)
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
-		}
-		else if (decodedOperation.Operation == Constants.Operation.RET ||
-		         decodedOperation.Operation == Constants.Operation.RETI ||
-		         decodedOperation.Operation == Constants.Operation.RETN)
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Condition}";
-		}
-		else
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Condition}, {decodedOperation.Operand1}";
+			decodedOperation.Operand1 = new Operand
+			{
+				Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
+			};
 		}
 	}
 
-	private void DecodeNType(DecodedOperation decodedOperation)
+	private void DecodeNType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format N - Nullary - (Group 10, Subgroup 11)
 		 * Field Positions:
@@ -548,8 +476,6 @@ internal partial class CPU
 		 * - b4-b7 - Opcode (4 bits)
 		 * - b8-b15 - Function (8 bits)
 		 */
-
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
 
 		// Decode operation
 		byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
@@ -590,13 +516,8 @@ internal partial class CPU
 					decodedOperation.OperandSize = Constants.OperandSize.Byte;
 					decodedOperation.Operand1 = new Operand
 					{
-						Target = null,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
+						Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.Byte),
 					};
-					decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.Byte);
-
 				}
 				break;
 			}
@@ -638,49 +559,7 @@ internal partial class CPU
 					decodedOperation.OperandSize = Constants.OperandSize.DWord;
 					decodedOperation.Operand1 = new Operand
 					{
-						Target = null,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
-					};
-					decodedOperation.Operand1.Immediate = FetchImmediate(decodedOperation, Constants.OperandSize.DWord);
-				}
-				else if (decodedOperation.Operation == Constants.Operation.LD_R_A)
-				{
-					decodedOperation.OperandSize = Constants.OperandSize.Word;
-
-					decodedOperation.Operand1 = new Operand
-					{
-						Target = Constants.RegisterTargets.R,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
-					};
-
-					decodedOperation.Operand2 = new Operand
-					{
-						Target = Constants.RegisterTargets.A,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
-					};
-				}
-				else if (decodedOperation.Operation == Constants.Operation.LD_A_R)
-				{
-					decodedOperation.OperandSize = Constants.OperandSize.Word;
-					decodedOperation.Operand1 = new Operand
-					{
-						Target = Constants.RegisterTargets.A,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
-					};
-					decodedOperation.Operand2 = new Operand
-					{
-						Target = Constants.RegisterTargets.R,
-						Immediate = null,
-						Indirect = false,
-						Displacement = null,
+						Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord),
 					};
 				}
 				break;
@@ -692,42 +571,23 @@ internal partial class CPU
 				);
 			}
 		}
-
-		if (decodedOperation.Operand1 is not null && decodedOperation.Operand2 is not null)
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}, {decodedOperation.Operand2}";
-		}
-		else if (decodedOperation.Operand1 is not null)
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
-		}
-		else
-		{
-			decodedOperation.DisplayString =
-				$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)}";
-		}
 	}
 
-	private void DecodeBLType(DecodedOperation decodedOperation)
+	private void DecodeBLType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format BL - Block (Group 11, Subgroup 10)
 		 * Field Positions:
-		 * - *b0-b1* - Group (11)
-		 *  - *b2-b3* - Group (10)
-		 *  - *b4-b7* - Opcode
-		 *  - *b8-b9* - Size
-		 *  - *b10* - Increment/Decrement (0 = Decrement, 1 = Increment)
-		 *  - *b11* - Repeat (0 = Once, 1 = Repeat)
-		 *  - *b12-b15* - Function
+		 *  - b0-b1 - Group (11)
+		 *  - b2-b3 - Group (10)
+		 *  - b4-b7 - Opcode
+		 *  - b8-b9 - Size
+		 *  - b10 - Increment/Decrement (0 = Decrement, 1 = Increment)
+		 *  - b11 - Repeat (0 = Once, 1 = Repeat)
+		 *  - b12-b15 - Function
 		 */
 
 		// This field was added on after starting the emulator, so all the block instructions are implemented individually.
 		// If we add more block ops I'll structure this better.
-
-		ushort instructionWord = BitConverter.ToUInt16(decodedOperation.Opcode.ToArray(), 0);
-
 		decodedOperation.Operation = instructionWord switch
 		{
 			0x050B => Constants.Operation.LDI,
@@ -754,7 +614,7 @@ internal partial class CPU
 		};
 	}
 
-	private void DecodeSBType(DecodedOperation decodedOperation)
+	private void DecodeSBType(ref DecodedOperation decodedOperation, ushort instructionWord)
 	{
 		/* Format SB - Single-Byte - (Group 11, Subgroup 11)
 		 * Field Positions:
@@ -763,7 +623,10 @@ internal partial class CPU
 		 * - b4-b7 - Opcode (4 bits)
 		 */
 
-		byte operationSelector = (byte)(decodedOperation.Opcode[0] >> 4);
+		byte opcodeByte = (byte)instructionWord; // low byte
+		byte highByte = (byte)(instructionWord >> 8); // immediate or unused
+
+		byte operationSelector = (byte)(opcodeByte >> 4);
 
 		decodedOperation.Operation = operationSelector switch
 		{
@@ -775,27 +638,21 @@ internal partial class CPU
 			),
 		};
 
-		if (decodedOperation.Operation == Constants.Operation.DJNZ ||
-		    decodedOperation.Operation == Constants.Operation.JANZ)
+		decodedOperation.OperandSize = Constants.OperandSize.Byte;
+
+		if (decodedOperation.Operation == Constants.Operation.NOP)
 		{
-			// Pull immediate operand from 16-bit word
+			// The high byte of the instruction word is discarded, and will be refetched
+			decodedOperation.OpcodeLength = 1;
+		}
+		else
+		{
+			// DJNZ / JANZ: the signed offset is packed into the high byte of the 16-bit fetch.
 			decodedOperation.Operand1 = new Operand
 			{
-				Target = null,
-				Immediate = decodedOperation.Opcode[1],
-				Indirect = false,
-				Displacement = null,
+				Immediate = highByte,
 			};
 		}
-		// Discard unused byte
-		else if (decodedOperation.Operation == Constants.Operation.NOP)
-		{
-			decodedOperation.Opcode.RemoveAt(0);
-		}
-
-		decodedOperation.OperandSize = Constants.OperandSize.Byte;
-		decodedOperation.DisplayString =
-			$"{GetOperationString(decodedOperation.Operation, decodedOperation.OperandSize)} {decodedOperation.Operand1}";
 	}
 
 	private static Constants.OperandSize DecodeOperandSize(byte selector)
@@ -811,7 +668,7 @@ internal partial class CPU
 
 	private static Constants.RegisterTargets DecodeRegisterTarget(byte selector, Constants.OperandSize size)
 	{
-		if (size == Constants.OperandSize.Byte || size == Constants.OperandSize.Word)
+		if (size is Constants.OperandSize.Byte or Constants.OperandSize.Word)
 		{
 			return selector switch
 			{

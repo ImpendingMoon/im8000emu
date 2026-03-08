@@ -12,4 +12,6 @@ internal static class Config
 	public static int DWordALUCost => 3;
 	// Throw exceptions on illegal emulated system states
 	public static bool EnableStrictMode => true;
+	public static int CpuSpeedHz => 4_000_000;
+	public static int TargetFramerate => 60;
 }
