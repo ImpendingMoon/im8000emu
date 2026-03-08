@@ -290,10 +290,10 @@ internal partial class CPU
 		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, resetVector);
 	}
 
-    /// <summary>
-    ///     Fetches and decodes the next operation, including interrupt servicing.
-    /// </summary>
-    public DecodedOperation Decode()
+	/// <summary>
+	///     Fetches and decodes the next operation, including interrupt servicing.
+	/// </summary>
+	public DecodedOperation Decode()
 	{
 		// If waiting for interrupts, handle them
 
@@ -305,11 +305,11 @@ internal partial class CPU
 		return Decode(pc);
 	}
 
-    /// <summary>
-    ///     Executes the decoded operation.
-    /// </summary>
-    /// <returns>Number of T-cycles taken.</returns>
-    public int Execute(DecodedOperation instruction)
+	/// <summary>
+	///     Executes the decoded operation.
+	/// </summary>
+	/// <returns>Number of T-cycles taken.</returns>
+	public int Execute(DecodedOperation instruction)
 	{
 		// Advance PC
 		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);

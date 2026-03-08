@@ -3387,7 +3387,7 @@ internal partial class CPU
 				a = (byte)a;
 				b = (byte)b;
 
-				result = (byte)(a ^ b);
+				result = (byte)(a & b);
 
 				flagState.Sign = (result & 0x80) != 0;
 
@@ -3399,7 +3399,7 @@ internal partial class CPU
 				a = (ushort)a;
 				b = (ushort)b;
 
-				result = (ushort)(a ^ b);
+				result = (ushort)(a & b);
 
 				flagState.Sign = (result & 0x8000) != 0;
 
@@ -3410,7 +3410,7 @@ internal partial class CPU
 			{
 				cycles += Config.DWordALUCost;
 
-				result = a ^ b;
+				result = a & b;
 
 				flagState.Sign = (result & 0x80000000) != 0;
 

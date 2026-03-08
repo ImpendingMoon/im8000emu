@@ -5,11 +5,11 @@ namespace im8000emu.Emulator;
 // Implements instruction decoding logic
 internal partial class CPU
 {
-    /// <summary>
-    ///     Fetches and decodes the operation at the given address. Does not include interrupt servicing.
-    /// </summary>
-    /// <param name="address">Base address of the opcode</param>
-    public DecodedOperation Decode(uint address)
+	/// <summary>
+	///     Fetches and decodes the operation at the given address. Does not include interrupt servicing.
+	/// </summary>
+	/// <param name="address">Base address of the opcode</param>
+	public DecodedOperation Decode(uint address)
 	{
 		var decodedOperation = new DecodedOperation
 		{

@@ -10,4 +10,6 @@ internal static class Config
 	public static int IOCycleCost => 4;
 	// The cost to ripple-carry DWord operands through the ALU twice
 	public static int DWordALUCost => 3;
+	// Throw exceptions on illegal emulated system states
+	public static bool EnableStrictMode => true;
 }
