@@ -316,6 +316,13 @@ internal partial class CPU
 		pc += (uint)instruction.Opcode.Count;
 		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 
+		if (_shouldEnableInterrupts)
+		{
+			Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, true);
+			Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, true);
+			_shouldEnableInterrupts = false;
+		}
+
 		int cycles = _operationExecutors[instruction.Operation](instruction);
 		return cycles;
 	}

@@ -211,19 +211,6 @@ internal sealed class Registers
 		}
 
 		SetRegister(Constants.RegisterTargets.F, Constants.OperandSize.Word, flags);
-
-		// Special handling of IFF2 for interrupts
-		if (flag == Constants.FlagMasks.EnableInterrupts)
-		{
-			SetFlag(Constants.FlagMasks.EnableInterruptsSave, value);
-		}
-	}
-
-	// Used in RETN to restore interrupt enabled state
-	public void RestoreIFF1()
-	{
-		bool iff2 = GetFlag(Constants.FlagMasks.EnableInterruptsSave);
-		SetFlag(Constants.FlagMasks.EnableInterrupts, iff2);
 	}
 
 	public void ClearRegisters()

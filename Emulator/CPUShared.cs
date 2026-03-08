@@ -5,6 +5,9 @@ internal partial class CPU
 {
 	private readonly MemoryBus _ioBus;
 	private readonly MemoryBus _memoryBus;
+	private int _interruptMode = 1;
+	private bool _isHalted = false;
+	private bool _shouldEnableInterrupts = false;
 
 	private MemoryResult ReadMemory(uint address, Constants.OperandSize size, bool useIO = false)
 	{

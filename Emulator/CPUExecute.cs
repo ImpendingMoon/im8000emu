@@ -13,17 +13,23 @@ internal partial class CPU
 
 	private int Execute_Interrupt(DecodedOperation operation)
 	{
-		if (Registers.GetFlag(Constants.FlagMasks.EnableInterrupts))
+		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
+		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, false);
+
+		if (_interruptMode == 1)
 		{
-			// if (_interruptMode == 1)
 			return Internal_ServiceInterrupt(1);
 		}
 
-		return operation.FetchCycles;
+		// TODO: Read vector from data bus
+		return Internal_ServiceInterrupt(1);
 	}
 
 	private int Execute_NonMaskableInterrupt(DecodedOperation operation)
 	{
+		// Save IFF2
+		bool iff1 = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
+		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, iff1);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
 		return Internal_ServiceInterrupt(2);
 	}
@@ -31,6 +37,7 @@ internal partial class CPU
 	// Do Nothing
 	private int Execute_HaltState(DecodedOperation operation)
 	{
+		// CPU is halted; keep executing NOPs until an interrupt wakes us
 		return 4;
 	}
 
@@ -376,7 +383,7 @@ internal partial class CPU
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
-			throw new ArgumentException("CPD requires no operands");
+			throw new ArgumentException("CPDR requires no operands");
 		}
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
@@ -1081,7 +1088,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SUB is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_DEC is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -1900,7 +1907,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_BIT is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -1951,7 +1958,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SET is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -2003,7 +2010,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_RES is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -2084,7 +2091,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit31 = result & 0x80000000;
+					uint bit31 = a & 0x80000000;
 					a = (a << 1) | (bit31 >> 31);
 					flagState.Carry = bit31 != 0;
 					cycles += Config.DWordALUCost;
@@ -2182,7 +2189,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit0 = result & 1;
+					uint bit0 = a & 1;
 					a = (a >> 1) | (bit0 << 31);
 					flagState.Carry = bit0 != 0;
 					cycles += Config.DWordALUCost;
@@ -2282,7 +2289,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit31 = result & 0x80000000;
+					uint bit31 = a & 0x80000000;
 					a = a << 1;
 					a |= (uint)(flagState.Carry ? 1 : 0);
 					flagState.Carry = bit31 != 0;
@@ -2297,7 +2304,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -2381,7 +2388,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit0 = result & 1;
+					uint bit0 = a & 1;
 					a = (a >> 1) | ((uint)(flagState.Carry ? 1 : 0) << 31);
 					flagState.Carry = bit0 != 0;
 					cycles += Config.DWordALUCost;
@@ -2479,7 +2486,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit31 = result & 0x80000000;
+					uint bit31 = a & 0x80000000;
 					a = a << 1;
 					flagState.Carry = bit31 != 0;
 					cycles += Config.DWordALUCost;
@@ -2493,7 +2500,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.OperandSize}");
 			}
 		}
 
@@ -2577,7 +2584,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit0 = result & 1;
+					uint bit0 = a & 1;
 					a >>= 1;
 					flagState.Carry = bit0 != 0;
 					cycles += Config.DWordALUCost;
@@ -2675,7 +2682,7 @@ internal partial class CPU
 
 				for (int i = 0; i < bit; i++)
 				{
-					uint bit0 = result & 1;
+					uint bit0 = a & 1;
 					a >>>= 1;
 					flagState.Carry = bit0 != 0;
 					cycles += Config.DWordALUCost;
@@ -2705,16 +2712,86 @@ internal partial class CPU
 		return cycles;
 	}
 
+	// Rotate Left Decimal
 	private int Execute_RLD(DecodedOperation operation)
 	{
-		// Rotate Left Decimal operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for RLD operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("RLD requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		MemoryResult readHL = ReadMemory(hl, Constants.OperandSize.Byte);
+		cycles += readHL.Cycles;
+
+		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		byte mem = (byte)readHL.Value;
+
+		byte aLow = (byte)(a & 0x0F);
+		byte memHigh = (byte)((mem >> 4) & 0x0F);
+		byte memLow = (byte)(mem & 0x0F);
+
+		byte newA = (byte)((a & 0xF0) | memHigh);
+		byte newMem = (byte)((memLow << 4) | aLow);
+
+		MemoryResult writeHL = WriteMemory(hl, Constants.OperandSize.Byte, newMem);
+		cycles += writeHL.Cycles;
+
+		ALUFlagState flagState = GetALUFlags();
+		flagState.Sign = (newA & 0x80) != 0;
+		flagState.Zero = newA == 0;
+		flagState.ParityOverflow = BitHelper.IsParityEven(newA);
+		flagState.HalfCarry = false;
+		flagState.Subtract = false;
+		UpdateALUFlags(flagState);
+
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, newA);
+
+		cycles += 2; // Extra cycles for nibble manipulation
+		return cycles;
 	}
 
+	// Rotate Right Decimal
 	private int Execute_RRD(DecodedOperation operation)
 	{
-		// Rotate Right Decimal operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for RRD operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("RRD requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		MemoryResult readHL = ReadMemory(hl, Constants.OperandSize.Byte);
+		cycles += readHL.Cycles;
+
+		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		byte mem = (byte)readHL.Value;
+
+		byte aLow = (byte)(a & 0x0F);
+		byte memHigh = (byte)((mem >> 4) & 0x0F);
+		byte memLow = (byte)(mem & 0x0F);
+
+		byte newA = (byte)((a & 0xF0) | memLow);
+		byte newMem = (byte)((aLow << 4) | memHigh);
+
+		MemoryResult writeHL = WriteMemory(hl, Constants.OperandSize.Byte, newMem);
+		cycles += writeHL.Cycles;
+
+		ALUFlagState flagState = GetALUFlags();
+		flagState.Sign = (newA & 0x80) != 0;
+		flagState.Zero = newA == 0;
+		flagState.ParityOverflow = BitHelper.IsParityEven(newA);
+		flagState.HalfCarry = false;
+		flagState.Subtract = false;
+		UpdateALUFlags(flagState);
+
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, newA);
+
+		cycles += 2; // Extra cycles for nibble manipulation
+		return cycles;
 	}
 
 	// No operation
@@ -2900,16 +2977,48 @@ internal partial class CPU
 		return cycles;
 	}
 
+	// Return from Interrupt
+	// Restores IFF1 from IFF2 and returns from interrupt service routine
 	private int Execute_RETI(DecodedOperation operation)
 	{
-		// Return from Interrupt operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for RETI operation
+		if (operation.Operand2 is not null)
+		{
+			throw new ArgumentException("RETI requires zero or one operand");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		// Restore IFF1 from IFF2
+		bool iff2 = Registers.GetFlag(Constants.FlagMasks.EnableInterruptsSave);
+		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, iff2);
+
+		MemoryResult popRead = Internal_Pop();
+		cycles += popRead.Cycles;
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+
+		return cycles;
 	}
 
+	// Return from Non-Maskable Interrupt
+	// Restores IFF1 from IFF2 and returns from NMI service routine
 	private int Execute_RETN(DecodedOperation operation)
 	{
-		// Return from Non-Maskable Interrupt operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for RETN operation
+		if (operation.Operand2 is not null)
+		{
+			throw new ArgumentException("RETN requires zero or one operand");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		// Restore IFF1 from IFF2 (saved on NMI entry)
+		bool iff2 = Registers.GetFlag(Constants.FlagMasks.EnableInterruptsSave);
+		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, iff2);
+
+		MemoryResult popRead = Internal_Pop();
+		cycles += popRead.Cycles;
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+
+		return cycles;
 	}
 
 	// Decrement B, Jump if Not Zero
@@ -2970,6 +3079,7 @@ internal partial class CPU
 		return cycles;
 	}
 
+	// Reset to Vector
 	private int Execute_RST(DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
@@ -3016,52 +3126,139 @@ internal partial class CPU
 		return cycles;
 	}
 
+	// Enable Interrupts
 	private int Execute_EI(DecodedOperation operation)
 	{
-		// Enable Interrupts operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for EI operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("EI requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		_shouldEnableInterrupts = true;
+
+		return cycles;
 	}
 
+	// Disable Interrupts
 	private int Execute_DI(DecodedOperation operation)
 	{
-		// Disable Interrupts operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for DI operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("DI requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
+		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, false);
+
+		return cycles;
 	}
 
+	// Set Interrupt Mode 1
 	private int Execute_IM1(DecodedOperation operation)
 	{
-		// Interrupt Mode 1 operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for IM1 operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("IM1 requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		_interruptMode = 1;
+
+		return cycles;
 	}
 
+	// Set Interrupt Mode 2
 	private int Execute_IM2(DecodedOperation operation)
 	{
-		// Interrupt Mode 2 operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for IM2 operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("IM2 requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		_interruptMode = 2;
+
+		return cycles;
 	}
 
+	// Halt - suspend execution until an interrupt occurs
 	private int Execute_HALT(DecodedOperation operation)
 	{
-		// HALT operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for HALT operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("HALT requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		_isHalted = true;
+
+		return cycles;
 	}
 
+	// Load Immediate into I register
 	private int Execute_LD_I_NN(DecodedOperation operation)
 	{
-		// Load Immediate into I operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for LD_I_NN operation
+		if (operation.Operand1 is null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("LD_I_NN requires one operand");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		MemoryResult operandRead = GetOperandValue(operation.Operand1, Constants.OperandSize.DWord);
+		cycles += operandRead.Cycles;
+
+		Registers.SetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord, operandRead.Value);
+
+		return cycles;
 	}
 
+	// Load A into R register
 	private int Execute_LD_R_A(DecodedOperation operation)
 	{
-		// Load A into R operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for LD_R_A operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("LD_R_A requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		uint a = Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Byte, a);
+
+		return cycles;
 	}
 
+	// Load R register into A
 	private int Execute_LD_A_R(DecodedOperation operation)
 	{
-		// Load R into A operation logic would go here
-		return operation.FetchCycles + 1; // Example cycle count for LD_A_R operation
+		if (operation.Operand1 is not null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("LD_A_R requires no operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		uint r = Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Byte);
+
+		ALUFlagState flagState = GetALUFlags();
+		flagState.Sign = (r & 0x80) != 0;
+		flagState.Zero = r == 0;
+		flagState.HalfCarry = false;
+		flagState.Subtract = false;
+		flagState.ParityOverflow = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
+		UpdateALUFlags(flagState);
+
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, r);
+
+		return cycles;
 	}
 
 	private int Internal_Block_LD(Constants.OperandSize size, bool increment)
@@ -3501,6 +3698,9 @@ internal partial class CPU
 	private int Internal_ServiceInterrupt(byte interruptNumber)
 	{
 		int cycles = 0;
+
+		// Wake from halt if necessary
+		_isHalted = false;
 
 		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
 		cycles += Internal_Push(pc);
