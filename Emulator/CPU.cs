@@ -143,6 +143,11 @@ internal partial class CPU
 		pc += (uint)instruction.OpcodeLength;
 		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 
+		// Advance Refresh
+		ushort r = (ushort)Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word);
+		r++;
+		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word, r);
+
 		if (_shouldEnableInterrupts)
 		{
 			Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, true);

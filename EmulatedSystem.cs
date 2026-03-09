@@ -16,7 +16,7 @@ internal class EmulatedSystem
 	{
 		_memoryBus = new MemoryBus();
 		_memoryBus.Map(0x0000_0000_0000, new MemoryDevice(romData, romData.Length, true));
-		_memoryBus.Map(0x0000_0020_0000, new MemoryDevice(0x10000));
+		_memoryBus.Map(0x0000_0010_0000, new MemoryDevice(0x10000));
 
 		_ioBus = new MemoryBus();
 		_ioBus.Map(0x0000_0000_0000, new ConsoleDevice());
