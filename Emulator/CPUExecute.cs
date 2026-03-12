@@ -2058,7 +2058,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2156,7 +2156,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2254,7 +2254,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2355,7 +2355,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2453,7 +2453,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2551,7 +2551,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -2649,7 +2649,7 @@ internal partial class CPU
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
-		uint result = 0;
+		uint result;
 		switch (operation.OperandSize)
 		{
 			case Constants.OperandSize.Byte:
@@ -3241,8 +3241,8 @@ internal partial class CPU
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint a = Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
-		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Byte, a);
+		uint a = Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word, a);
 
 		return cycles;
 	}
@@ -3252,17 +3252,18 @@ internal partial class CPU
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint r = Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Byte);
+		uint r = Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word);
 
-		ALUFlagState flagState = GetALUFlags();
-		flagState.Sign = (r & 0x80) != 0;
-		flagState.Zero = r == 0;
-		flagState.HalfCarry = false;
-		flagState.Subtract = false;
-		flagState.ParityOverflow = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
-		UpdateALUFlags(flagState);
+		// Z80 sets flags and I don't know why. Don't like that.
+		// ALUFlagState flagState = GetALUFlags();
+		// flagState.Sign = (r & 0x80) != 0;
+		// flagState.Zero = r == 0;
+		// flagState.HalfCarry = false;
+		// flagState.Subtract = false;
+		// flagState.ParityOverflow = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
+		// UpdateALUFlags(flagState);
 
-		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, r);
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word, r);
 
 		return cycles;
 	}
