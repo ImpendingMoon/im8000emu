@@ -3086,9 +3086,37 @@ internal partial class CPU
 
 		if (a != 0)
 		{
-			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
-			pc += (int)BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			pc += BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			cycles += 2;
+		}
+
+		return cycles;
+	}
+
+	// Jump if A is Zero
+	private int Execute_JAZ(DecodedOperation operation)
+	{
+		if (operation.Operand1 is null || operation.Operand2 is not null)
+		{
+			throw new ArgumentException("JAZ requires one operand");
+		}
+
+		if (operation.Operand1!.Value.Immediate is null)
+		{
+			throw new ArgumentException("JAZ requires one immediate operand");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+
+		if (a == 0)
+		{
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			pc += BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
 			cycles += 2;
 		}
 

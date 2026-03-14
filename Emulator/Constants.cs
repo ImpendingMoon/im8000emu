@@ -123,6 +123,7 @@ internal static class Constants
 		RETN, // Return from Non-Maskable Interrupt
 		DJNZ, // Decrement, Jump if Not Zero
 		JANZ, // Jump if A is Not Zero
+		JAZ, // Jump if A is Zero
 		RST, // Software Interrupt
 		SCF, // Set Carry Flag
 		CCF, // Complement Carry Flag

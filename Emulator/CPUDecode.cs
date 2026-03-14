@@ -633,6 +633,7 @@ internal partial class CPU
 			0b0000 => Constants.Operation.NOP,
 			0b0001 => Constants.Operation.DJNZ,
 			0b0010 => Constants.Operation.JANZ,
+			0b0011 => Constants.Operation.JAZ,
 			_ => throw new InvalidOperationException(
 				$"0b{operationSelector:B4} is not a valid single-byte operation selector"
 			),
@@ -647,7 +648,7 @@ internal partial class CPU
 		}
 		else
 		{
-			// DJNZ / JANZ: the signed offset is packed into the high byte of the 16-bit fetch.
+			// DJNZ / JANZ / JAZ: the signed offset is packed into the high byte of the 16-bit fetch.
 			decodedOperation.Operand1 = new Operand
 			{
 				Immediate = highByte,

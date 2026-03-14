@@ -87,6 +87,7 @@ internal partial class CPU
 		_operationExecutors[(int)Constants.Operation.RETN] = Execute_RETN;
 		_operationExecutors[(int)Constants.Operation.DJNZ] = Execute_DJNZ;
 		_operationExecutors[(int)Constants.Operation.JANZ] = Execute_JANZ;
+		_operationExecutors[(int)Constants.Operation.JAZ] = Execute_JAZ;
 		_operationExecutors[(int)Constants.Operation.RST] = Execute_RST;
 		_operationExecutors[(int)Constants.Operation.CCF] = Execute_CCF;
 		_operationExecutors[(int)Constants.Operation.SCF] = Execute_SCF;
