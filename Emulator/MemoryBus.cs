@@ -6,10 +6,6 @@ internal class MemoryBus
 {
 	private readonly List<Mapping> _mappings = [];
 
-	// ------------------------------------------------------------------
-	// Device registration
-	// ------------------------------------------------------------------
-
 	/// <summary>
 	///     Map a device into the address space starting at <paramref name="baseAddress" />.
 	///     The device occupies [baseAddress, baseAddress + device.Size).
@@ -17,8 +13,6 @@ internal class MemoryBus
 	/// </summary>
 	public void Map(uint baseAddress, IMemoryDevice device)
 	{
-		ArgumentNullException.ThrowIfNull(device);
-
 		uint end = baseAddress + device.Size;
 
 		foreach (Mapping m in _mappings)
@@ -73,10 +67,8 @@ internal class MemoryBus
 
 				if ((offset + length) > m.Device.Size)
 				{
-					throw new ArgumentOutOfRangeException(
-						nameof(address),
-						$"Access [0x{address:X}, 0x{address + length:X}) crosses the boundary of " +
-						$"{m.Device.GetType().Name} mapped at 0x{m.Base:X}."
+					throw new ExecutionException(
+						$"Access 0x{address:X} is out of bounds for device {m.Device.GetType().Name} mapped at 0x{m.Base:X}."
 					);
 				}
 
@@ -84,7 +76,7 @@ internal class MemoryBus
 			}
 		}
 
-		throw new ArgumentOutOfRangeException(nameof(address), $"No device mapped at address 0x{address:X}.");
+		throw new ExecutionException($"No device mapped at address 0x{address:X}.");
 	}
 
 	private readonly record struct Mapping(uint Base, uint End, IMemoryDevice Device);

@@ -90,7 +90,7 @@ internal partial class CPU
 					default:
 					{
 						// Other groups are reserved for expansion.
-						throw new InvalidOperationException("Invalid special instruction subgroup.");
+						throw new DecoderException("Invalid special instruction subgroup.");
 					}
 				}
 				break;
@@ -143,9 +143,7 @@ internal partial class CPU
 			0b010010 => Constants.Operation.SLA,
 			0b010011 => Constants.Operation.SRA,
 			0b010100 => Constants.Operation.SRL,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B6} is not a valid R-Type operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B6} is not a valid R-Type operation selector"),
 		};
 
 		// Decode operand size
@@ -157,7 +155,7 @@ internal partial class CPU
 
 		if (operand1Selector == 0b111)
 		{
-			throw new InvalidOperationException("0b111 is not a valid destination target");
+			throw new DecoderException("0b111 is not a valid destination target");
 		}
 		decodedOperation.Operand1 = new Operand
 		{
@@ -221,9 +219,7 @@ internal partial class CPU
 			0b10011 => Constants.Operation.SRA,
 			0b10100 => Constants.Operation.SRL,
 			0b10101 => Constants.Operation.IN_OUT,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B6} is not a valid RM-Type operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B6} is not a valid RM-Type operation selector"),
 		};
 
 		// Decode direction
@@ -264,13 +260,11 @@ internal partial class CPU
 		{
 			if (isLoad)
 			{
-				throw new InvalidOperationException(
-					"0b111 is not a valid destination target for memory-to-register operations"
-				);
+				throw new DecoderException("0b111 is not a valid destination target for memory-to-register operations");
 			}
 			if (indirectOperandSelector == 0b111)
 			{
-				throw new InvalidOperationException("0b111 is not a valid source target with direct addressing");
+				throw new DecoderException("0b111 is not a valid source target with direct addressing");
 			}
 
 			registerOperand.Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize);
@@ -323,9 +317,7 @@ internal partial class CPU
 			0b0001001 => Constants.Operation.DIV,
 			0b0001010 => Constants.Operation.SDIV,
 			0b0001011 => Constants.Operation.CPL,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B7} is not a valid UR-Type operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B7} is not a valid UR-Type operation selector"),
 		};
 
 		// Decode operand size
@@ -337,7 +329,7 @@ internal partial class CPU
 
 		if (operand1Selector == 0b111)
 		{
-			throw new InvalidOperationException("0b111 is not a valid target selector for UR-type instructions");
+			throw new DecoderException("0b111 is not a valid target selector for UR-type instructions");
 		}
 		decodedOperation.Operand1 = new Operand
 		{
@@ -374,9 +366,7 @@ internal partial class CPU
 			0b0001001 => Constants.Operation.DIV,
 			0b0001010 => Constants.Operation.SDIV,
 			0b0001011 => Constants.Operation.CPL,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B7} is not a valid UM-Type operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B7} is not a valid UM-Type operation selector"),
 		};
 
 		// Decode operand size
@@ -432,9 +422,7 @@ internal partial class CPU
 			0b01000 => Constants.Operation.RET,
 			0b01001 => Constants.Operation.RETI,
 			0b01010 => Constants.Operation.RETN,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B5} is not a valid B-Type operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B5} is not a valid B-Type operation selector"),
 		};
 
 		// Decode condition
@@ -491,7 +479,7 @@ internal partial class CPU
 				{
 					0b00000000 => Constants.Operation.EXX,
 					0b00000001 => Constants.Operation.EXI,
-					_ => throw new InvalidOperationException(
+					_ => throw new DecoderException(
 						$"0b{functionSelector:B8} is not a valid Exchange function selector"
 					),
 				};
@@ -505,7 +493,7 @@ internal partial class CPU
 					0b00000000 => Constants.Operation.RST,
 					0b00000001 => Constants.Operation.SCF,
 					0b00000010 => Constants.Operation.CCF,
-					_ => throw new InvalidOperationException(
+					_ => throw new DecoderException(
 						$"0b{functionSelector:B8} is not a valid Control Flow function selector"
 					),
 				};
@@ -529,9 +517,7 @@ internal partial class CPU
 					0b00000000 => Constants.Operation.DAA,
 					0b00000001 => Constants.Operation.RLD,
 					0b00000010 => Constants.Operation.RRD,
-					_ => throw new InvalidOperationException(
-						$"0b{functionSelector:B8} is not a valid BCD function selector"
-					),
+					_ => throw new DecoderException($"0b{functionSelector:B8} is not a valid BCD function selector"),
 				};
 				break;
 			}
@@ -548,9 +534,7 @@ internal partial class CPU
 					0b00000101 => Constants.Operation.LD_I_NN,
 					0b00000110 => Constants.Operation.LD_R_A,
 					0b00000111 => Constants.Operation.LD_A_R,
-					_ => throw new InvalidOperationException(
-						$"0b{functionSelector:B8} is not a valid System function selector"
-					),
+					_ => throw new DecoderException($"0b{functionSelector:B8} is not a valid System function selector"),
 				};
 
 				// LD_I_NN takes an immediate dword operand, LD_R_A and LD_A_R operate on implied registers
@@ -566,9 +550,7 @@ internal partial class CPU
 			}
 			default:
 			{
-				throw new InvalidOperationException(
-					$"0b{operationSelector:B4} is not a valid N-Type operation selector"
-				);
+				throw new DecoderException($"0b{operationSelector:B4} is not a valid N-Type operation selector");
 			}
 		}
 	}
@@ -610,7 +592,7 @@ internal partial class CPU
 			0x013B => Constants.Operation.OUTD,
 			0x0D3B => Constants.Operation.OTIR,
 			0x093B => Constants.Operation.OTDR,
-			_ => throw new InvalidOperationException($"0b{instructionWord:B16} is not a valid Block operation"),
+			_ => throw new DecoderException($"0b{instructionWord:B16} is not a valid Block operation"),
 		};
 	}
 
@@ -634,9 +616,7 @@ internal partial class CPU
 			0b0001 => Constants.Operation.DJNZ,
 			0b0010 => Constants.Operation.JANZ,
 			0b0011 => Constants.Operation.JAZ,
-			_ => throw new InvalidOperationException(
-				$"0b{operationSelector:B4} is not a valid single-byte operation selector"
-			),
+			_ => throw new DecoderException($"0b{operationSelector:B4} is not a valid single-byte operation selector"),
 		};
 
 		decodedOperation.OperandSize = Constants.OperandSize.Byte;
@@ -663,7 +643,7 @@ internal partial class CPU
 			0b00 => Constants.OperandSize.Byte,
 			0b01 => Constants.OperandSize.Word,
 			0b10 => Constants.OperandSize.DWord,
-			_ => throw new ArgumentException($"0b{selector:B} is not a valid operand size selector"),
+			_ => throw new DecoderException($"0b{selector:B} is not a valid operand size selector"),
 		};
 	}
 
@@ -680,7 +660,7 @@ internal partial class CPU
 				0b100 => Constants.RegisterTargets.E,
 				0b101 => Constants.RegisterTargets.H,
 				0b110 => Constants.RegisterTargets.L,
-				_ => throw new ArgumentException($"0b{selector:B} is not a valid register selector"),
+				_ => throw new DecoderException($"0b{selector:B} is not a valid register selector"),
 			};
 		}
 
@@ -693,7 +673,7 @@ internal partial class CPU
 			0b100 => Constants.RegisterTargets.IX,
 			0b101 => Constants.RegisterTargets.IY,
 			0b110 => Constants.RegisterTargets.SP,
-			_ => throw new ArgumentException($"{selector} is not a valid register selector"),
+			_ => throw new DecoderException($"{selector} is not a valid register selector"),
 		};
 	}
 
@@ -710,7 +690,7 @@ internal partial class CPU
 			0b0110 => Constants.Condition.P,
 			0b0111 => Constants.Condition.N,
 			0b1111 => Constants.Condition.Unconditional,
-			_ => throw new ArgumentException($"0b{selector:B4} is not a valid condition selector"),
+			_ => throw new DecoderException($"0b{selector:B4} is not a valid condition selector"),
 		};
 	}
 }
