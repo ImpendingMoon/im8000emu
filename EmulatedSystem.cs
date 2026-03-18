@@ -6,41 +6,37 @@ namespace im8000emu;
 internal class EmulatedSystem
 {
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Config.TargetFramerate;
+	private readonly MemoryBus _ioBus;
+	private readonly MemoryBus _memoryBus;
+	private readonly InterruptBus _interruptBus;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
 
 	public EmulatedSystem(byte[] romData)
 	{
+		// 1980-era business micro, similar to the 5150.
 
-		var biosRom = new MemoryDevice(romData, 0x10000, readOnly: true);
-			// 1980-era business micro, similar to the 5150.
-		var mainRam = new MemoryDevice(Config.MemorySize);
-		var videoRam = new MemoryDevice(Config.VideoMemorySize);
-
-		var memoryBus = new MemoryBus();
+		_memoryBus = new MemoryBus();
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
-		// BIOS extension ROMs follow in 64KB blocks until 0x1F_FFFF
-		memoryBus.AttachDevice(biosRom, 0x00_0000, 0x00_FFFF);
-		// At least 16 KB RAM
-		memoryBus.AttachDevice(mainRam, 0x20_0000, 0x3F_FFFF);
-		// Unused from 0x40_0000-0xDF_FFFF
-		// At least 4 KB VRAM
-		memoryBus.AttachDevice(videoRam, 0xE0_0000, 0xFF_FFFF);
+		// BIOS extension ROMs follow with 64KB blocks until 0x1F_FFFF
+		_memoryBus.Map(0x00_0000, new MemoryDevice(romData, 0x10000, true));
+		// At least 16 KB RAM mapped to 0x20_0000-0x3F_0000
+		_memoryBus.Map(0x20_0000, new MemoryDevice(Config.MemorySizeKiB));
+		// At least 4 KB VRAM mapped to 0xE0_0000-0xFF_FFFF
+		_memoryBus.Map(0xE0_0000, new MemoryDevice(0x1000));
 
-		var ioBus = new MemoryBus();
+		_ioBus = new MemoryBus();
 		// Temp, console device maps directly to stdin/out byte streams
-		ioBus.AttachDevice(new ConsoleDevice(), 0, 4);
+		_ioBus.Map(0x00_0000, new ConsoleDevice());
 
 		// TODO:
-		// - Z80 CTC, SIO, PIO, DMA
-		// - NEC uPD765A-compatible FDC, MC6845-based video card
-		// - New PIC to interface external interrupt sources with IM 2 bus
-		// - PC-AT keyboard logic. Probably just send scancodes in circular buffer.
-		//   This was a generic MCU on the PC-AT anyway.
-		var interruptBus = new InterruptBus();
+		// Z80 CTC, SIO, PIO, DMA (maybe 8257 for FDC compat?)
+		// NEC uPD765A FDC, MC6845-based video card
+		// PC-AT keyboard logic
+		_interruptBus = new InterruptBus();
 
-		CPU = new CPU(memoryBus, ioBus, interruptBus);
+		CPU = new CPU(_memoryBus, _ioBus, _interruptBus);
 		CPU.Reset();
 	}
 

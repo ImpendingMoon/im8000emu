@@ -4,11 +4,11 @@ internal interface IMemoryDevice
 {
 	uint Size { get; }
 
-	byte ReadByte(uint address);
+	byte ReadByte(uint offset);
 
-	void WriteByte(uint address, byte value);
+	void WriteByte(uint offset, byte value);
 
-	Span<byte> ReadByteArray(uint address, uint length);
+	Span<byte> ReadByteArray(uint offset, uint length);
 
-	void WriteByteArray(uint address, Span<byte> data);
+	void WriteByteArray(uint offset, Span<byte> data);
 }

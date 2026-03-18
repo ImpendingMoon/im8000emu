@@ -21,11 +21,6 @@ internal class MemoryDevice : IMemoryDevice
 			throw new ArgumentException("Device size is smaller than the data image.", nameof(size));
 		}
 
-		if (size == 0)
-		{
-			throw new ArgumentException("Size cannot be 0.", nameof(size));
-		}
-
 		_data = new byte[size];
 		Array.Copy(data, _data, data.Length);
 		_readOnly = readOnly;
@@ -33,62 +28,48 @@ internal class MemoryDevice : IMemoryDevice
 
 	public uint Size => (uint)_data.Length;
 
-	public byte ReadByte(uint address)
+	public byte ReadByte(uint offset)
 	{
-		uint offset = address % Size;
+		CheckBounds(offset, 1);
 		return _data[offset];
 	}
 
-	public void WriteByte(uint address, byte value)
+	public void WriteByte(uint offset, byte value)
 	{
+		CheckBounds(offset, 1);
 		if (_readOnly)
 		{
-			return;
+			throw new InvalidOperationException($"Write to read-only MemoryDevice at offset 0x{offset:X}.");
 		}
 
-		uint offset = address % Size;
 		_data[offset] = value;
 	}
 
-	public Span<byte> ReadByteArray(uint address, uint length)
+	public Span<byte> ReadByteArray(uint offset, uint length)
 	{
-		uint offset = address % Size;
-
-		if (offset + length >= Size)
-		{
-			// Slow wrapped read
-			byte[] data = new byte[length];
-			for (int i = 0; i < length; i++)
-			{
-				data[i] = ReadByte((uint)(offset + i));
-			}
-			return data.AsSpan();
-		}
-
+		CheckBounds(offset, length);
 		return _data.AsSpan()[(int)offset..(int)(offset + length)];
 	}
 
-	public void WriteByteArray(uint address, Span<byte> data)
+	public void WriteByteArray(uint offset, Span<byte> data)
 	{
+		CheckBounds(offset, (uint)data.Length);
 		if (_readOnly)
 		{
-			return;
+			throw new InvalidOperationException($"Write to read-only MemoryDevice at offset 0x{offset:X}.");
 		}
 
-		uint offset = address % Size;
+		data.CopyTo(_data.AsSpan()[(int)offset..]);
+	}
 
-		if (offset + data.Length >= Size)
+	private void CheckBounds(uint offset, uint length)
+	{
+		if ((offset + length) > Size)
 		{
-			// Slow wrapped write
-			for (int i = 0; i < data.Length; i++)
-			{
-				byte value = data[i];
-				WriteByte((uint)(offset + i), value);
-			}
-		}
-		else
-		{
-			data.CopyTo(_data.AsSpan()[(int)offset..]);
+			throw new ArgumentOutOfRangeException(
+				nameof(offset),
+				$"Access 0x{offset:X}+{length} is out of bounds for device of size 0x{Size:X}."
+			);
 		}
 	}
 }

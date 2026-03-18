@@ -11,64 +11,70 @@ namespace im8000emu.Emulator.Devices;
 /// </summary>
 internal class ConsoleDevice : IMemoryDevice
 {
-	public const uint StatusOffset = 0;
-	public const uint RxDataOffset = 1;
-	public const uint TxDataOffset = 2;
+	public const uint OffsetStatus = 0;
+	public const uint OffsetRxData = 1;
+	public const uint OffsetTxData = 2;
 
-	public const byte StatusRxReadyBit = 0b0000_0001;
-	public const byte StatusTxReadyBit = 0b0000_0010;
+	public const byte StatusRxReady = 0b0000_0001;
+	public const byte StatusTxReady = 0b0000_0010;
 
 	private readonly Stream _stdout = Console.OpenStandardOutput();
 
-	public uint Size => 4;
+	public uint Size => 3;
 
-	public byte ReadByte(uint address)
+	public byte ReadByte(uint offset)
 	{
-		uint offset = address % Size;
 		return offset switch
 		{
-			StatusOffset => BuildStatus(),
-			RxDataOffset => ReadRx(),
-			_ => 0xFF,
+			OffsetStatus => BuildStatus(),
+			OffsetRxData => ReadRx(),
+			OffsetTxData => throw new InvalidOperationException("TX_DATA is write-only."),
+			_ => throw new ArgumentOutOfRangeException(nameof(offset)),
 		};
 	}
 
-	public void WriteByte(uint address, byte value)
+	public void WriteByte(uint offset, byte value)
 	{
-		uint offset = address % Size;
-
-		if (offset == TxDataOffset)
+		switch (offset)
 		{
-			_stdout.WriteByte(value);
-			_stdout.Flush();
+			case OffsetTxData:
+			{
+				_stdout.WriteByte(value);
+				_stdout.Flush();
+				break;
+			}
+
+			case OffsetStatus: throw new InvalidOperationException("STATUS is read-only");
+			case OffsetRxData: throw new InvalidOperationException("RX_DATA is read-only.");
+			default: throw new ArgumentOutOfRangeException(nameof(offset));
 		}
 	}
 
-	public Span<byte> ReadByteArray(uint address, uint length)
+	public Span<byte> ReadByteArray(uint offset, uint length)
 	{
 		byte[] result = new byte[length];
 		for (uint i = 0; i < length; i++)
 		{
-			result[i] = ReadByte(address + i);
+			result[i] = ReadByte(offset + i);
 		}
 		return result;
 	}
 
-	public void WriteByteArray(uint address, Span<byte> data)
+	public void WriteByteArray(uint offset, Span<byte> data)
 	{
 		for (int i = 0; i < data.Length; i++)
 		{
-			WriteByte(address + (uint)i, data[i]);
+			WriteByte(offset + (uint)i, data[i]);
 		}
 	}
 
 	private static byte BuildStatus()
 	{
-		byte status = StatusTxReadyBit;
+		byte status = StatusTxReady;
 
 		if (Console.KeyAvailable)
 		{
-			status |= StatusRxReadyBit;
+			status |= StatusRxReady;
 		}
 
 		return status;
