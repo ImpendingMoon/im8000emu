@@ -21,8 +21,8 @@ internal partial class CPU
 			return Internal_ServiceInterrupt(1);
 		}
 
-		// TODO: Read vector from data bus
-		return Internal_ServiceInterrupt(1);
+		byte number = _interruptBus.Acknowledge(nmi: false);
+		return Internal_ServiceInterrupt(number);
 	}
 
 	private int Execute_NonMaskableInterrupt(DecodedOperation operation)
@@ -31,6 +31,8 @@ internal partial class CPU
 		bool iff1 = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, iff1);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
+
+		_interruptBus.Acknowledge(nmi: true);
 		return Internal_ServiceInterrupt(2);
 	}
 

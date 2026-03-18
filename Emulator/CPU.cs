@@ -4,10 +4,11 @@ internal partial class CPU
 {
 	private readonly Func<DecodedOperation, int>[] _operationExecutors;
 
-	public CPU(MemoryBus memoryBus, MemoryBus ioBus)
+	public CPU(MemoryBus memoryBus, MemoryBus ioBus, InterruptBus interruptBus)
 	{
 		_memoryBus = memoryBus;
 		_ioBus = ioBus;
+		_interruptBus = interruptBus;
 
 		// Methods defined in CPUExecute.cs, same order as Constants.Operation enum
 		_operationExecutors = new Func<DecodedOperation, int>[(int)Constants.Operation.LD_A_R + 1];
@@ -118,6 +119,21 @@ internal partial class CPU
 	public DecodedOperation Decode()
 	{
 		// If waiting for interrupts, handle them
+		if (_interruptBus.HasPendingNmi)
+		{
+			return new DecodedOperation
+			{
+				Operation = Constants.Operation.NonMaskableInterrupt,
+			};
+		}
+
+		if (_interruptBus.HasPendingInterrupt && Registers.GetFlag(Constants.FlagMasks.EnableInterrupts))
+		{
+			return new DecodedOperation
+			{
+				Operation = Constants.Operation.Interrupt,
+			};
+		}
 
 		if (_isHalted)
 		{

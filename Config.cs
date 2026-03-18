@@ -14,4 +14,6 @@ internal static class Config
 	public static bool EnableStrictMode => true;
 	public static int CpuSpeedHz => 4_000_000;
 	public static int TargetFramerate => 60;
+	public static uint MemorySizeKiB => 0x4000;
+	public static uint VideoMemorySizeKiB => 0x1000;
 }

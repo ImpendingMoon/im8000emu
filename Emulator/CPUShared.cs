@@ -5,6 +5,7 @@ namespace im8000emu.Emulator;
 // Contains shared private members between CPU.cs, CPUDecode.cs, and CPUExecute.cs
 internal partial class CPU
 {
+	private readonly InterruptBus _interruptBus;
 	private readonly MemoryBus _ioBus;
 	private readonly MemoryBus _memoryBus;
 

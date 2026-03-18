@@ -18,7 +18,7 @@ internal class MemoryDevice : IMemoryDevice
 	{
 		if (size < data.Length)
 		{
-			throw new ArgumentException("Provided size is smaller than the data array.", nameof(size));
+			throw new ArgumentException("Device size is smaller than the data image.", nameof(size));
 		}
 
 		_data = new byte[size];
