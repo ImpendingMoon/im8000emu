@@ -1,19 +1,30 @@
-﻿namespace im8000emu;
+﻿using Microsoft.Extensions.Configuration;
+
+namespace im8000emu;
 
 internal static class Config
 {
-	// The cost to execute an instruction after fetching
-	public static int BaseInstructionCost => 1;
-	// The cost to read/write from memory once
-	public static int BusCycleCost => 3;
-	// The cost to read/write from an IO device once
-	public static int IOCycleCost => 4;
-	// The cost to ripple-carry DWord operands through the ALU twice
-	public static int DWordALUCost => 3;
-	// Throw exceptions on illegal emulated system states
-	public static bool EnableStrictMode => true;
-	public static int CpuSpeedHz => 4_000_000;
-	public static int TargetFramerate => 60;
-	public static uint MemorySizeKiB => 0x4000;
-	public static uint VideoMemorySizeKiB => 0x1000;
+	private static readonly IConfiguration _configuration = new ConfigurationBuilder()
+		.SetBasePath(AppContext.BaseDirectory)
+		.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+		.Build();
+
+	/// <summary>The cost to execute an instruction after fetching</summary>
+	public static int BaseInstructionCost => _configuration.GetValue<int>("Emulator:BaseInstructionCost");
+	/// <summary>The cost to read/write from memory once</summary>
+	public static int BusCycleCost => _configuration.GetValue<int>("Emulator:BusCycleCost");
+	/// <summary>The cost to read/write from an IO device once</summary>
+	public static int IOCycleCost => _configuration.GetValue<int>("Emulator:IOCycleCost");
+	/// <summary>The cost to move a DWord through the ALU</summary>
+	public static int DWordALUCost => _configuration.GetValue<int>("Emulator:DWordALUCost");
+	/// <summary>Throw exceptions on illegal emulated system states</summary>
+	public static bool EnableStrictMode => _configuration.GetValue<bool>("Emulator:EnableStrictMode");
+	/// <summary>Emulated CPU speed in Hz. Recommended 4,000,000 Hz, max is whatever your CPU can handle</summary>
+	public static int CpuSpeedHz => _configuration.GetValue<int>("Emulator:CpuSpeedHz");
+	/// <summary>Target framerate. Recommended 60 FPS. Lower values *might* help with slow emulation.</summary>
+	public static int TargetFramerate => _configuration.GetValue<int>("Emulator:TargetFramerate");
+	/// <summary>Main memory size in bytes. Min 16,384, max 12,582,912</summary>
+	public static uint MemorySize => _configuration.GetValue<uint>("Emulator:MemorySize");
+	/// <summary>VRAM size in bytes. Min 4,096, max 2,097,152</summary>
+	public static uint VideoMemorySize => _configuration.GetValue<uint>("Emulator:VideoMemorySize");
 }

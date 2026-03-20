@@ -15,8 +15,8 @@ internal class EmulatedSystem
 
 		var biosRom = new MemoryDevice(romData, 0x10000, readOnly: true);
 			// 1980-era business micro, similar to the 5150.
-		var mainRam = new MemoryDevice(Config.MemorySizeKiB);
-		var videoRam = new MemoryDevice(Config.VideoMemorySizeKiB);
+		var mainRam = new MemoryDevice(Config.MemorySize);
+		var videoRam = new MemoryDevice(Config.VideoMemorySize);
 
 		var memoryBus = new MemoryBus();
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
