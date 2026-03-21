@@ -2,7 +2,8 @@
 
 internal partial class CPU
 {
-	private readonly Func<DecodedOperation, int>[] _operationExecutors;
+	private delegate int Executor(in DecodedOperation instruction);
+	private readonly Executor[] _operationExecutors;
 
 	public CPU(MemoryBus memoryBus, MemoryBus ioBus, InterruptBus interruptBus)
 	{
@@ -11,7 +12,7 @@ internal partial class CPU
 		_interruptBus = interruptBus;
 
 		// Methods defined in CPUExecute.cs, same order as Constants.Operation enum
-		_operationExecutors = new Func<DecodedOperation, int>[(int)Constants.Operation.LD_A_R + 1];
+		_operationExecutors = new Executor[(int)Constants.Operation.LD_A_R + 1];
 
 		_operationExecutors[(int)Constants.Operation.None] = Execute_None;
 		_operationExecutors[(int)Constants.Operation.Interrupt] = Execute_Interrupt;
@@ -153,7 +154,7 @@ internal partial class CPU
 	///     Executes the decoded operation.
 	/// </summary>
 	/// <returns>Number of T-cycles taken.</returns>
-	public int Execute(DecodedOperation instruction)
+	public int Execute(in DecodedOperation instruction)
 	{
 		// Advance PC
 		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
@@ -172,7 +173,7 @@ internal partial class CPU
 			_shouldEnableInterrupts = false;
 		}
 
-		int cycles = _operationExecutors[(int)instruction.Operation](instruction);
+		int cycles = _operationExecutors[(int)instruction.Operation](in instruction);
 		return cycles;
 	}
 }

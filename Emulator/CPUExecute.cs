@@ -5,13 +5,13 @@ namespace im8000emu.Emulator;
 // Implements methods to execute each operation
 internal partial class CPU
 {
-	private int Execute_None(DecodedOperation operation)
+	private int Execute_None(in DecodedOperation operation)
 	{
 		// Here for completeness. None should be caught in decoder.
 		return operation.FetchCycles;
 	}
 
-	private int Execute_Interrupt(DecodedOperation operation)
+	private int Execute_Interrupt(in DecodedOperation operation)
 	{
 		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, false);
@@ -25,7 +25,7 @@ internal partial class CPU
 		return Internal_ServiceInterrupt(number);
 	}
 
-	private int Execute_NonMaskableInterrupt(DecodedOperation operation)
+	private int Execute_NonMaskableInterrupt(in DecodedOperation operation)
 	{
 		// Save IFF2
 		bool iff1 = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
@@ -37,14 +37,14 @@ internal partial class CPU
 	}
 
 	// Do Nothing
-	private int Execute_HaltState(DecodedOperation operation)
+	private int Execute_HaltState(in DecodedOperation operation)
 	{
 		// CPU is halted; keep executing NOPs until an interrupt wakes us
 		return 4;
 	}
 
 	// Load
-	private int Execute_LD(DecodedOperation operation)
+	private int Execute_LD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -67,7 +67,7 @@ internal partial class CPU
 	}
 
 	// Exchange
-	private int Execute_EX(DecodedOperation operation)
+	private int Execute_EX(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -98,7 +98,7 @@ internal partial class CPU
 	}
 
 	// Exchange with Alternate
-	private int Execute_EX_Alt(DecodedOperation operation)
+	private int Execute_EX_Alt(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -121,7 +121,7 @@ internal partial class CPU
 	}
 
 	// Exchange Primary with Alternate
-	private int Execute_EXX(DecodedOperation operation)
+	private int Execute_EXX(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -136,7 +136,7 @@ internal partial class CPU
 	}
 
 	// Exchange Index with Alternate
-	private int Execute_EXI(DecodedOperation operation)
+	private int Execute_EXI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -151,7 +151,7 @@ internal partial class CPU
 	}
 
 	// Exchange Halves
-	private int Execute_EXH(DecodedOperation operation)
+	private int Execute_EXH(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -197,7 +197,7 @@ internal partial class CPU
 	}
 
 	// Push to stack
-	private int Execute_PUSH(DecodedOperation operation)
+	private int Execute_PUSH(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -220,7 +220,7 @@ internal partial class CPU
 	}
 
 	// Pop from stack
-	private int Execute_POP(DecodedOperation operation)
+	private int Execute_POP(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -245,7 +245,7 @@ internal partial class CPU
 	}
 
 	// In/Out
-	private int Execute_IN_OUT(DecodedOperation operation)
+	private int Execute_IN_OUT(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -289,7 +289,7 @@ internal partial class CPU
 	}
 
 	// Load and Increment
-	private int Execute_LDI(DecodedOperation operation)
+	private int Execute_LDI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -304,7 +304,7 @@ internal partial class CPU
 	}
 
 	// Load, Increment, and Repeat
-	private int Execute_LDIR(DecodedOperation operation)
+	private int Execute_LDIR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -320,7 +320,7 @@ internal partial class CPU
 	}
 
 	// Load and Decrement
-	private int Execute_LDD(DecodedOperation operation)
+	private int Execute_LDD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -335,7 +335,7 @@ internal partial class CPU
 	}
 
 	// Load, Decrement, and Repeat
-	private int Execute_LDDR(DecodedOperation operation)
+	private int Execute_LDDR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -351,7 +351,7 @@ internal partial class CPU
 	}
 
 	// Compare and Increment
-	private int Execute_CPI(DecodedOperation operation)
+	private int Execute_CPI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -366,7 +366,7 @@ internal partial class CPU
 	}
 
 	// Compare, Increment, and Repeat
-	private int Execute_CPIR(DecodedOperation operation)
+	private int Execute_CPIR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -382,7 +382,7 @@ internal partial class CPU
 	}
 
 	// Compare and Decrement
-	private int Execute_CPD(DecodedOperation operation)
+	private int Execute_CPD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -397,7 +397,7 @@ internal partial class CPU
 	}
 
 	// Compare, Decrement, and Repeat
-	private int Execute_CPDR(DecodedOperation operation)
+	private int Execute_CPDR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -413,7 +413,7 @@ internal partial class CPU
 	}
 
 	// Test and Increment
-	private int Execute_TSI(DecodedOperation operation)
+	private int Execute_TSI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -428,7 +428,7 @@ internal partial class CPU
 	}
 
 	// Test, Increment, and Repeat
-	private int Execute_TSIR(DecodedOperation operation)
+	private int Execute_TSIR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -444,7 +444,7 @@ internal partial class CPU
 	}
 
 	// Test and Decrement
-	private int Execute_TSD(DecodedOperation operation)
+	private int Execute_TSD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -459,7 +459,7 @@ internal partial class CPU
 	}
 
 	// Test, Decrement, and Repeat
-	private int Execute_TSDR(DecodedOperation operation)
+	private int Execute_TSDR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -475,7 +475,7 @@ internal partial class CPU
 	}
 
 	// Input and Increment
-	private int Execute_INI(DecodedOperation operation)
+	private int Execute_INI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -490,7 +490,7 @@ internal partial class CPU
 	}
 
 	// Input, Increment, and Repeat
-	private int Execute_INIR(DecodedOperation operation)
+	private int Execute_INIR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -506,7 +506,7 @@ internal partial class CPU
 	}
 
 	// Input and Decrement
-	private int Execute_IND(DecodedOperation operation)
+	private int Execute_IND(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -521,7 +521,7 @@ internal partial class CPU
 	}
 
 	// Input, Decrement, and Repeat
-	private int Execute_INDR(DecodedOperation operation)
+	private int Execute_INDR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -537,7 +537,7 @@ internal partial class CPU
 	}
 
 	// Output and Increment
-	private int Execute_OUTI(DecodedOperation operation)
+	private int Execute_OUTI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -552,7 +552,7 @@ internal partial class CPU
 	}
 
 	// Output, Increment, and Repeat
-	private int Execute_OTIR(DecodedOperation operation)
+	private int Execute_OTIR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -568,7 +568,7 @@ internal partial class CPU
 	}
 
 	// Output and Decrement
-	private int Execute_OUTD(DecodedOperation operation)
+	private int Execute_OUTD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -583,7 +583,7 @@ internal partial class CPU
 	}
 
 	// Output, Decrement, and Repeat
-	private int Execute_OTDR(DecodedOperation operation)
+	private int Execute_OTDR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -599,7 +599,7 @@ internal partial class CPU
 	}
 
 	// Add
-	private int Execute_ADD(DecodedOperation operation)
+	private int Execute_ADD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -683,7 +683,7 @@ internal partial class CPU
 	}
 
 	// Add with Carry
-	private int Execute_ADC(DecodedOperation operation)
+	private int Execute_ADC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -770,7 +770,7 @@ internal partial class CPU
 	}
 
 	// Subtract
-	private int Execute_SUB(DecodedOperation operation)
+	private int Execute_SUB(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -854,7 +854,7 @@ internal partial class CPU
 	}
 
 	// Subtract with Carry
-	private int Execute_SBC(DecodedOperation operation)
+	private int Execute_SBC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -941,7 +941,7 @@ internal partial class CPU
 	}
 
 	// Compare
-	private int Execute_CP(DecodedOperation operation)
+	private int Execute_CP(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -964,7 +964,7 @@ internal partial class CPU
 	}
 
 	// Increment
-	private int Execute_INC(DecodedOperation operation)
+	private int Execute_INC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1042,7 +1042,7 @@ internal partial class CPU
 	}
 
 	// Decrement
-	private int Execute_DEC(DecodedOperation operation)
+	private int Execute_DEC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1122,7 +1122,7 @@ internal partial class CPU
 
 	// Decimal Adjust A
 	// Implementation taken from "The Undocumented Z80 Documented" by Sean Young
-	private int Execute_DAA(DecodedOperation operation)
+	private int Execute_DAA(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -1194,7 +1194,7 @@ internal partial class CPU
 
 	// Negate
 	// Implemented as 0 - x for flags
-	private int Execute_NEG(DecodedOperation operation)
+	private int Execute_NEG(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1272,7 +1272,7 @@ internal partial class CPU
 	}
 
 	// Sign Extend
-	private int Execute_EXT(DecodedOperation operation)
+	private int Execute_EXT(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1317,7 +1317,7 @@ internal partial class CPU
 	}
 
 	// Multiply
-	private int Execute_MLT(DecodedOperation operation)
+	private int Execute_MLT(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1386,7 +1386,7 @@ internal partial class CPU
 	}
 
 	// Divide
-	private int Execute_DIV(DecodedOperation operation)
+	private int Execute_DIV(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1467,7 +1467,7 @@ internal partial class CPU
 	}
 
 	// Signed Divide
-	private int Execute_SDIV(DecodedOperation operation)
+	private int Execute_SDIV(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1558,7 +1558,7 @@ internal partial class CPU
 	}
 
 	// AND
-	private int Execute_AND(DecodedOperation operation)
+	private int Execute_AND(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1636,7 +1636,7 @@ internal partial class CPU
 	}
 
 	// OR
-	private int Execute_OR(DecodedOperation operation)
+	private int Execute_OR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1714,7 +1714,7 @@ internal partial class CPU
 	}
 
 	// XOR
-	private int Execute_XOR(DecodedOperation operation)
+	private int Execute_XOR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1792,7 +1792,7 @@ internal partial class CPU
 	}
 
 	// TST
-	private int Execute_TST(DecodedOperation operation)
+	private int Execute_TST(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1813,7 +1813,7 @@ internal partial class CPU
 	}
 
 	// CPL
-	private int Execute_CPL(DecodedOperation operation)
+	private int Execute_CPL(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -1885,7 +1885,7 @@ internal partial class CPU
 	}
 
 	// Test bit
-	private int Execute_BIT(DecodedOperation operation)
+	private int Execute_BIT(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1938,7 +1938,7 @@ internal partial class CPU
 	}
 
 	// Set bit
-	private int Execute_SET(DecodedOperation operation)
+	private int Execute_SET(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -1990,7 +1990,7 @@ internal partial class CPU
 	}
 
 	// Reset bit
-	private int Execute_RES(DecodedOperation operation)
+	private int Execute_RES(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2042,7 +2042,7 @@ internal partial class CPU
 	}
 
 	// Rotate left circular
-	private int Execute_RLC(DecodedOperation operation)
+	private int Execute_RLC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2140,7 +2140,7 @@ internal partial class CPU
 	}
 
 	// Rotate right circular
-	private int Execute_RRC(DecodedOperation operation)
+	private int Execute_RRC(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2238,7 +2238,7 @@ internal partial class CPU
 	}
 
 	// Rotate left
-	private int Execute_RL(DecodedOperation operation)
+	private int Execute_RL(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2339,7 +2339,7 @@ internal partial class CPU
 	}
 
 	// Rotate right
-	private int Execute_RR(DecodedOperation operation)
+	private int Execute_RR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2437,7 +2437,7 @@ internal partial class CPU
 	}
 
 	// Shift left arithmetic
-	private int Execute_SLA(DecodedOperation operation)
+	private int Execute_SLA(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2535,7 +2535,7 @@ internal partial class CPU
 	}
 
 	// Shift right arithmetic
-	private int Execute_SRA(DecodedOperation operation)
+	private int Execute_SRA(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2633,7 +2633,7 @@ internal partial class CPU
 	}
 
 	// Shift right logical
-	private int Execute_SRL(DecodedOperation operation)
+	private int Execute_SRL(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is null)
 		{
@@ -2731,7 +2731,7 @@ internal partial class CPU
 	}
 
 	// Rotate Left Decimal
-	private int Execute_RLD(DecodedOperation operation)
+	private int Execute_RLD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -2772,7 +2772,7 @@ internal partial class CPU
 	}
 
 	// Rotate Right Decimal
-	private int Execute_RRD(DecodedOperation operation)
+	private int Execute_RRD(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -2813,13 +2813,13 @@ internal partial class CPU
 	}
 
 	// No operation
-	private int Execute_NOP(DecodedOperation operation)
+	private int Execute_NOP(in DecodedOperation operation)
 	{
 		return operation.FetchCycles + 1;
 	}
 
 	// Jump
-	private int Execute_JP(DecodedOperation operation)
+	private int Execute_JP(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2840,7 +2840,7 @@ internal partial class CPU
 	}
 
 	// Jump Relative Short
-	private int Execute_JR_s8(DecodedOperation operation)
+	private int Execute_JR_s8(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2867,7 +2867,7 @@ internal partial class CPU
 	}
 
 	// Jump Relative
-	private int Execute_JR(DecodedOperation operation)
+	private int Execute_JR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2894,7 +2894,7 @@ internal partial class CPU
 	}
 
 	// Call
-	private int Execute_CALL(DecodedOperation operation)
+	private int Execute_CALL(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2918,7 +2918,7 @@ internal partial class CPU
 	}
 
 	// Call Relative Short
-	private int Execute_CALLR_s8(DecodedOperation operation)
+	private int Execute_CALLR_s8(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2946,7 +2946,7 @@ internal partial class CPU
 	}
 
 	// Call Relative
-	private int Execute_CALLR(DecodedOperation operation)
+	private int Execute_CALLR(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -2974,7 +2974,7 @@ internal partial class CPU
 	}
 
 	// Return
-	private int Execute_RET(DecodedOperation operation)
+	private int Execute_RET(in DecodedOperation operation)
 	{
 		if (operation.Operand2 is not null)
 		{
@@ -2997,7 +2997,7 @@ internal partial class CPU
 
 	// Return from Interrupt
 	// Restores IFF1 from IFF2 and returns from interrupt service routine
-	private int Execute_RETI(DecodedOperation operation)
+	private int Execute_RETI(in DecodedOperation operation)
 	{
 		if (operation.Operand2 is not null)
 		{
@@ -3019,7 +3019,7 @@ internal partial class CPU
 
 	// Return from Non-Maskable Interrupt
 	// Restores IFF1 from IFF2 and returns from NMI service routine
-	private int Execute_RETN(DecodedOperation operation)
+	private int Execute_RETN(in DecodedOperation operation)
 	{
 		if (operation.Operand2 is not null)
 		{
@@ -3040,7 +3040,7 @@ internal partial class CPU
 	}
 
 	// Decrement B, Jump if Not Zero
-	private int Execute_DJNZ(DecodedOperation operation)
+	private int Execute_DJNZ(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -3070,7 +3070,7 @@ internal partial class CPU
 	}
 
 	// Jump if A Not Zero
-	private int Execute_JANZ(DecodedOperation operation)
+	private int Execute_JANZ(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -3098,7 +3098,7 @@ internal partial class CPU
 	}
 
 	// Jump if A is Zero
-	private int Execute_JAZ(DecodedOperation operation)
+	private int Execute_JAZ(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -3126,7 +3126,7 @@ internal partial class CPU
 	}
 
 	// Reset to Vector
-	private int Execute_RST(DecodedOperation operation)
+	private int Execute_RST(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -3142,7 +3142,7 @@ internal partial class CPU
 	}
 
 	// Set Carry Flag
-	private int Execute_SCF(DecodedOperation operation)
+	private int Execute_SCF(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3157,7 +3157,7 @@ internal partial class CPU
 	}
 
 	// Complement Carry Flag
-	private int Execute_CCF(DecodedOperation operation)
+	private int Execute_CCF(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3173,7 +3173,7 @@ internal partial class CPU
 	}
 
 	// Enable Interrupts
-	private int Execute_EI(DecodedOperation operation)
+	private int Execute_EI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3188,7 +3188,7 @@ internal partial class CPU
 	}
 
 	// Disable Interrupts
-	private int Execute_DI(DecodedOperation operation)
+	private int Execute_DI(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3204,7 +3204,7 @@ internal partial class CPU
 	}
 
 	// Set Interrupt Mode 1
-	private int Execute_IM1(DecodedOperation operation)
+	private int Execute_IM1(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3219,7 +3219,7 @@ internal partial class CPU
 	}
 
 	// Set Interrupt Mode 2
-	private int Execute_IM2(DecodedOperation operation)
+	private int Execute_IM2(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3234,7 +3234,7 @@ internal partial class CPU
 	}
 
 	// Halt - suspend execution until an interrupt occurs
-	private int Execute_HALT(DecodedOperation operation)
+	private int Execute_HALT(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is not null || operation.Operand2 is not null)
 		{
@@ -3249,7 +3249,7 @@ internal partial class CPU
 	}
 
 	// Load Immediate into I register
-	private int Execute_LD_I_NN(DecodedOperation operation)
+	private int Execute_LD_I_NN(in DecodedOperation operation)
 	{
 		if (operation.Operand1 is null || operation.Operand2 is not null)
 		{
@@ -3267,7 +3267,7 @@ internal partial class CPU
 	}
 
 	// Load A into R register
-	private int Execute_LD_R_A(DecodedOperation operation)
+	private int Execute_LD_R_A(in DecodedOperation operation)
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3278,7 +3278,7 @@ internal partial class CPU
 	}
 
 	// Load R register into A
-	private int Execute_LD_A_R(DecodedOperation operation)
+	private int Execute_LD_A_R(in DecodedOperation operation)
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3667,7 +3667,7 @@ internal partial class CPU
 		return cycles;
 	}
 
-	private int Internal_Block_Loop(DecodedOperation operation)
+	private int Internal_Block_Loop(in DecodedOperation operation)
 	{
 		// If PV == 1 (BC != 0), continue
 		if (Registers.GetFlag(Constants.FlagMasks.ParityOverflow))
@@ -3685,7 +3685,7 @@ internal partial class CPU
 		return 0;
 	}
 
-	private int Internal_IO_Block_Loop(DecodedOperation operation)
+	private int Internal_IO_Block_Loop(in DecodedOperation operation)
 	{
 		// If Z == 0 (B != 0), continue
 		if (!Registers.GetFlag(Constants.FlagMasks.Zero))
