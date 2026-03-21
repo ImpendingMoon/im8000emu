@@ -160,6 +160,8 @@ internal static class Constants
 		Graphics320x200x2bpp = 0x11,
 	}
 
+	public static readonly int TargetFramerate = 60;
+
 	public static readonly Dictionary<RegisterTargets, RegisterTargets> RegisterToAlternate = new()
 	{
 		{

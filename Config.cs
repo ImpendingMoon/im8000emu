@@ -21,8 +21,6 @@ internal static class Config
 	public static readonly bool EnableStrictMode = _configuration.GetValue<bool>("Emulator:EnableStrictMode");
 	/// <summary>Emulated CPU speed in Hz. Recommended 4,000,000 Hz, max is whatever your CPU can handle</summary>
 	public static readonly int CpuSpeedHz = _configuration.GetValue<int>("Emulator:CpuSpeedHz");
-	/// <summary>Target framerate. Recommended 60 FPS. Lower values *might* help with slow emulation.</summary>
-	public static readonly int TargetFramerate = _configuration.GetValue<int>("Emulator:TargetFramerate");
 	/// <summary>Main memory size in bytes. Min 16,384, max 12,582,912</summary>
 	public static readonly uint MemorySize = _configuration.GetValue<uint>("Emulator:MemorySize");
 	/// <summary>VRAM size in bytes. Min 4,096, max 2,097,152</summary>

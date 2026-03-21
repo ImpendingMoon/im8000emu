@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
+using im8000emu.Emulator;
 using Raylib_cs;
 
 namespace im8000emu;
@@ -32,15 +33,17 @@ internal class Program
 		Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
 		Raylib.InitWindow(640 * 2, 480 * 2, "im8000emu");
 		Raylib.SetWindowMinSize(640, 480);
+		Raylib.SetExitKey(KeyboardKey.Null);
+		Raylib.SetTraceLogLevel(TraceLogLevel.Warning);
 
 		byte[] romData = File.ReadAllBytes(filePath);
 		var system = new EmulatedSystem(romData);
 
-		Console.WriteLine($"im8000emu - {Config.CpuSpeedHz / 1_000_000} MHz, {Config.TargetFramerate} fps target");
+		Console.WriteLine($"im8000emu - {Config.CpuSpeedHz / 1_000_000} MHz, {Constants.TargetFramerate} fps target");
 		Console.WriteLine($"ROM: {filePath} ({romData.Length:N0} bytes)");
 		Console.WriteLine();
 
-		double frameIntervalMs = 1000.0 / Config.TargetFramerate;
+		double frameIntervalMs = 1000.0 / Constants.TargetFramerate;
 		var stopwatch = new Stopwatch();
 
 		while (!Raylib.WindowShouldClose())

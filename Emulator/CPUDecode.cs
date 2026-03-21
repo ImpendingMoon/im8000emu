@@ -634,34 +634,175 @@ internal partial class CPU
 
 		// This field was added on after starting the emulator, so all the block instructions are implemented individually.
 		// If we add more block ops I'll structure this better.
-		decodedOperation.Operation = instructionWord switch
+		switch (instructionWord)
 		{
-			0x050B => Constants.Operation.LDI,
-			0x010B => Constants.Operation.LDD,
-			0x0D0B => Constants.Operation.LDIR,
-			0x090B => Constants.Operation.LDDR,
-			0x051B => Constants.Operation.CPI,
-			0x011B => Constants.Operation.CPD,
-			0x0D1B => Constants.Operation.CPIR,
-			0x091B => Constants.Operation.CPDR,
-			0x151B => Constants.Operation.TSI,
-			0x111B => Constants.Operation.TSD,
-			0x1D1B => Constants.Operation.TSIR,
-			0x191B => Constants.Operation.TSDR,
-			0x052B => Constants.Operation.INI,
-			0x012B => Constants.Operation.IND,
-			0x0D2B => Constants.Operation.INIR,
-			0x092B => Constants.Operation.INDR,
-			0x053B => Constants.Operation.OUTI,
-			0x013B => Constants.Operation.OUTD,
-			0x0D3B => Constants.Operation.OTIR,
-			0x093B => Constants.Operation.OTDR,
-			_ => throw new DecodeException(
-				_currentOperation.BaseAddress,
-				instructionWord,
-				$"0b{instructionWord:B16} is not a valid Block operation selector"
-			),
-		};
+			case 0x040B:
+				decodedOperation.Operation = Constants.Operation.LDI;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x050B:
+				decodedOperation.Operation = Constants.Operation.LDI;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x000B:
+				decodedOperation.Operation = Constants.Operation.LDD;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x010B:
+				decodedOperation.Operation = Constants.Operation.LDD;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x0C0B:
+				decodedOperation.Operation = Constants.Operation.LDIR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x0D0B:
+				decodedOperation.Operation = Constants.Operation.LDIR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x080B:
+				decodedOperation.Operation = Constants.Operation.LDDR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x090B:
+				decodedOperation.Operation = Constants.Operation.LDDR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x041B:
+				decodedOperation.Operation = Constants.Operation.CPI;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x051B:
+				decodedOperation.Operation = Constants.Operation.CPI;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x001B:
+				decodedOperation.Operation = Constants.Operation.CPD;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x011B:
+				decodedOperation.Operation = Constants.Operation.CPD;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x0C1B:
+				decodedOperation.Operation = Constants.Operation.CPIR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x0D1B:
+				decodedOperation.Operation = Constants.Operation.CPIR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x081B:
+				decodedOperation.Operation = Constants.Operation.CPDR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x091B:
+				decodedOperation.Operation = Constants.Operation.CPDR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x141B:
+				decodedOperation.Operation = Constants.Operation.TSI;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x151B:
+				decodedOperation.Operation = Constants.Operation.TSI;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x101B:
+				decodedOperation.Operation = Constants.Operation.TSD;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x111B:
+				decodedOperation.Operation = Constants.Operation.TSD;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x1C1B:
+				decodedOperation.Operation = Constants.Operation.TSIR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x1D1B:
+				decodedOperation.Operation = Constants.Operation.TSIR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x181B:
+				decodedOperation.Operation = Constants.Operation.TSDR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x191B:
+				decodedOperation.Operation = Constants.Operation.TSDR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x042B:
+				decodedOperation.Operation = Constants.Operation.INI;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x052B:
+				decodedOperation.Operation = Constants.Operation.INI;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x002B:
+				decodedOperation.Operation = Constants.Operation.IND;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x012B:
+				decodedOperation.Operation = Constants.Operation.IND;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x0C2B:
+				decodedOperation.Operation = Constants.Operation.INIR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x0D2B:
+				decodedOperation.Operation = Constants.Operation.INIR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x082B:
+				decodedOperation.Operation = Constants.Operation.INDR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x092B:
+				decodedOperation.Operation = Constants.Operation.INDR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x043B:
+				decodedOperation.Operation = Constants.Operation.OUTI;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x053B:
+				decodedOperation.Operation = Constants.Operation.OUTI;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x003B:
+				decodedOperation.Operation = Constants.Operation.OUTD;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x013B:
+				decodedOperation.Operation = Constants.Operation.OUTD;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x0C3B:
+				decodedOperation.Operation = Constants.Operation.OTIR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x0D3B:
+				decodedOperation.Operation = Constants.Operation.OTIR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			case 0x083B:
+				decodedOperation.Operation = Constants.Operation.OTDR;
+				decodedOperation.DataSize = Constants.DataSize.Byte;
+				break;
+			case 0x093B:
+				decodedOperation.Operation = Constants.Operation.OTDR;
+				decodedOperation.DataSize = Constants.DataSize.Word;
+				break;
+			default:
+				throw new DecodeException(
+					_currentOperation.BaseAddress,
+					instructionWord,
+					$"0b{instructionWord:B16} is not a valid Block operation selector"
+				);
+		}
 	}
 
 	private void DecodeSBType(ref DecodedOperation decodedOperation, ushort instructionWord)

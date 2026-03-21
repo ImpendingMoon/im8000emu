@@ -6,7 +6,7 @@ namespace im8000emu;
 
 internal class EmulatedSystem
 {
-	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Config.TargetFramerate;
+	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Constants.TargetFramerate;
 	private readonly VideoDevice _videoCard;
 
 	// Cycles remaining from the previous frame.
