@@ -15,7 +15,7 @@ internal partial class CPU
 	private bool _isHalted;
 	private bool _shouldEnableInterrupts;
 
-	private MemoryResult ReadMemory(uint address, Constants.OperandSize size, bool useIO = false)
+	private MemoryResult ReadMemory(uint address, Constants.DataSize size, bool useIO = false)
 	{
 		MemoryResult result;
 
@@ -23,43 +23,21 @@ internal partial class CPU
 
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
-		switch (size)
+		result.Value = activeBus.Read(address, size);
+		result.Cycles = size switch
 		{
-			case Constants.OperandSize.Byte:
-			{
-				result.Value = activeBus.ReadByte(address);
-				result.Cycles = 1;
-				break;
-			}
-
-			case Constants.OperandSize.Word:
-			{
-				Span<byte> data = activeBus.ReadByteArray(address, 2);
-				result.Value = BinaryPrimitives.ReadUInt16LittleEndian(data);
-				result.Cycles = aligned ? 1 : 2;
-				break;
-			}
-
-			case Constants.OperandSize.DWord:
-			{
-				Span<byte> data = activeBus.ReadByteArray(address, 4);
-				result.Value = BinaryPrimitives.ReadUInt32LittleEndian(data);
-				result.Cycles = aligned ? 2 : 3;
-				break;
-			}
-
-			default:
-			{
-				throw new ArgumentException($"ReadMemory is not implemented for OperandSize {size}");
-			}
-		}
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => aligned ? 1 : 2,
+			Constants.DataSize.DWord => aligned ? 2 : 3,
+			_ => throw new ArgumentException($"ReadMemory is not implemented for DataSize {size}"),
+		};
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
 		return result;
 	}
 
-	private MemoryResult WriteMemory(uint address, Constants.OperandSize size, uint value, bool useIO = false)
+	private MemoryResult WriteMemory(uint address, Constants.DataSize size, uint value, bool useIO = false)
 	{
 		MemoryResult result;
 		result.Value = 0;
@@ -68,45 +46,21 @@ internal partial class CPU
 
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
-		switch (size)
+		activeBus.Write(address, size, value);
+		result.Cycles = size switch
 		{
-			case Constants.OperandSize.Byte:
-			{
-				activeBus.WriteByte(address, (byte)value);
-				result.Cycles = 1;
-				break;
-			}
-
-			case Constants.OperandSize.Word:
-			{
-				Span<byte> bytes = stackalloc byte[2];
-				BinaryPrimitives.WriteUInt16LittleEndian(bytes, (ushort)value);
-				activeBus.WriteByteArray(address, bytes);
-				result.Cycles = aligned ? 1 : 2;
-				break;
-			}
-
-			case Constants.OperandSize.DWord:
-			{
-				Span<byte> bytes = stackalloc byte[4];
-				BinaryPrimitives.WriteUInt32LittleEndian(bytes, value);
-				activeBus.WriteByteArray(address, bytes);
-				result.Cycles = aligned ? 2 : 3;
-				break;
-			}
-
-			default:
-			{
-				throw new ArgumentException($"WriteMemory is not implemented for OperandSize {size}");
-			}
-		}
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => aligned ? 1 : 2,
+			Constants.DataSize.DWord => aligned ? 2 : 3,
+			_ => throw new ArgumentException($"WriteMemory is not implemented for DataSize {size}"),
+		};
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
 		return result;
 	}
 
-	private MemoryResult GetOperandValue(in Operand operand, Constants.OperandSize size)
+	private MemoryResult GetOperandValue(in Operand operand, Constants.DataSize size)
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
@@ -137,7 +91,7 @@ internal partial class CPU
 		return result;
 	}
 
-	private MemoryResult WritebackOperand(in Operand operand, Constants.OperandSize size, uint value)
+	private MemoryResult WritebackOperand(in Operand operand, Constants.DataSize size, uint value)
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
@@ -172,7 +126,7 @@ internal partial class CPU
 
 		if (operand.Target is not null)
 		{
-			address = Registers.GetRegister(operand.Target.Value, Constants.OperandSize.DWord);
+			address = Registers.GetRegister(operand.Target.Value, Constants.DataSize.DWord);
 		}
 		else if (operand.Immediate is not null)
 		{
@@ -191,21 +145,21 @@ internal partial class CPU
 		return address;
 	}
 
-	private void ExchangeWithAlternate(Constants.RegisterTargets register, Constants.OperandSize size)
+	private void ExchangeWithAlternate(Constants.RegisterTargets register, Constants.DataSize size)
 	{
 		// In hardware, this would just be a mux bit flip
 		// In software, easier to actually exchange the values
 		Constants.RegisterTargets alternate = Constants.RegisterToAlternate[register];
 
-		ushort primaryValue = (ushort)Registers.GetRegister(register, Constants.OperandSize.Word);
-		ushort alternateValue = (ushort)Registers.GetRegister(alternate, Constants.OperandSize.Word);
+		ushort primaryValue = (ushort)Registers.GetRegister(register, Constants.DataSize.Word);
+		ushort alternateValue = (ushort)Registers.GetRegister(alternate, Constants.DataSize.Word);
 
-		Registers.SetRegister(alternate, Constants.OperandSize.Word, primaryValue);
-		Registers.SetRegister(register, Constants.OperandSize.Word, alternateValue);
+		Registers.SetRegister(alternate, Constants.DataSize.Word, primaryValue);
+		Registers.SetRegister(register, Constants.DataSize.Word, alternateValue);
 	}
 
 	// ref parameter: DecodedOperation is now a struct, so we must pass by ref to mutate FetchCycles/OpcodeLength
-	private uint FetchImmediate(ref DecodedOperation decodedOperation, Constants.OperandSize size)
+	private uint FetchImmediate(ref DecodedOperation decodedOperation, Constants.DataSize size)
 	{
 		MemoryResult immediateFetch = ReadMemory(
 			(uint)(decodedOperation.BaseAddress + decodedOperation.OpcodeLength),
@@ -214,9 +168,9 @@ internal partial class CPU
 		decodedOperation.FetchCycles += immediateFetch.Cycles;
 		decodedOperation.OpcodeLength += size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
 			_ => throw new ArgumentException($"{size} is not a valid operand size"),
 		};
 		return immediateFetch.Value;

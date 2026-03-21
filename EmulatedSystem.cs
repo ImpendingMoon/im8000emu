@@ -64,9 +64,9 @@ internal class EmulatedSystem
 				Console.Error.WriteLine($"Exception during execution: {ex.Message}");
 
 				// Advance PC to avoid an infinite fault loop.
-				uint pc = CPU.Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+				uint pc = CPU.Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 				pc += 2;
-				CPU.Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+				CPU.Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 				cycles = 1;
 			}

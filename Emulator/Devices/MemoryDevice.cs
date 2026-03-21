@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace im8000emu.Emulator.Devices;
 
 /// <summary>
@@ -20,7 +22,6 @@ internal class MemoryDevice : IMemoryDevice
 		{
 			throw new ArgumentException("Device size is smaller than the data image.", nameof(size));
 		}
-
 		if (size == 0)
 		{
 			throw new ArgumentException("Size cannot be 0.", nameof(size));
@@ -33,42 +34,30 @@ internal class MemoryDevice : IMemoryDevice
 
 	public uint Size => (uint)_data.Length;
 
-	public byte ReadByte(uint address)
+	public uint Read(uint address, Constants.DataSize size)
 	{
 		uint offset = address % Size;
-		return _data[offset];
-	}
 
-	public void WriteByte(uint address, byte value)
-	{
-		if (_readOnly)
+		return size switch
 		{
-			return;
-		}
+			Constants.DataSize.Byte => _data[offset],
 
-		uint offset = address % Size;
-		_data[offset] = value;
+			Constants.DataSize.Word => (offset + 2) <= Size
+				? BinaryPrimitives.ReadUInt16LittleEndian(_data.AsSpan((int)offset))
+				: (uint)(_data[offset % Size] | (_data[(offset + 1) % Size] << 8)),
+
+			Constants.DataSize.DWord => (offset + 4) <= Size
+				? BinaryPrimitives.ReadUInt32LittleEndian(_data.AsSpan((int)offset))
+				: (uint)(_data[offset % Size] |
+					(_data[(offset + 1) % Size] << 8) |
+					(_data[(offset + 2) % Size] << 16) |
+					(_data[(offset + 3) % Size] << 24)),
+
+			_ => throw new ArgumentOutOfRangeException(nameof(size)),
+		};
 	}
 
-	public Span<byte> ReadByteArray(uint address, uint length)
-	{
-		uint offset = address % Size;
-
-		if (offset + length >= Size)
-		{
-			// Slow wrapped read
-			byte[] data = new byte[length];
-			for (int i = 0; i < length; i++)
-			{
-				data[i] = ReadByte((uint)(offset + i));
-			}
-			return data.AsSpan();
-		}
-
-		return _data.AsSpan()[(int)offset..(int)(offset + length)];
-	}
-
-	public void WriteByteArray(uint address, Span<byte> data)
+	public void Write(uint address, Constants.DataSize size, uint value)
 	{
 		if (_readOnly)
 		{
@@ -77,18 +66,37 @@ internal class MemoryDevice : IMemoryDevice
 
 		uint offset = address % Size;
 
-		if (offset + data.Length >= Size)
+		switch (size)
 		{
-			// Slow wrapped write
-			for (int i = 0; i < data.Length; i++)
-			{
-				byte value = data[i];
-				WriteByte((uint)(offset + i), value);
-			}
-		}
-		else
-		{
-			data.CopyTo(_data.AsSpan()[(int)offset..]);
+			case Constants.DataSize.Byte:
+				_data[offset] = (byte)value;
+				break;
+
+			case Constants.DataSize.Word:
+				if ((offset + 2) <= Size)
+				{
+					BinaryPrimitives.WriteUInt16LittleEndian(_data.AsSpan((int)offset), (ushort)value);
+				}
+				else
+				{
+					_data[offset % Size] = (byte)value;
+					_data[(offset + 1) % Size] = (byte)(value >> 8);
+				}
+				break;
+
+			case Constants.DataSize.DWord:
+				if ((offset + 4) <= Size)
+				{
+					BinaryPrimitives.WriteUInt32LittleEndian(_data.AsSpan((int)offset), value);
+				}
+				else
+				{
+					_data[offset % Size] = (byte)value;
+					_data[(offset + 1) % Size] = (byte)(value >> 8);
+					_data[(offset + 2) % Size] = (byte)(value >> 16);
+					_data[(offset + 3) % Size] = (byte)(value >> 24);
+				}
+				break;
 		}
 	}
 }

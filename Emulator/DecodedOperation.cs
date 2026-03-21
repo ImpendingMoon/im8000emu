@@ -3,7 +3,7 @@
 internal struct DecodedOperation
 {
 	public Constants.Operation Operation;
-	public Constants.OperandSize OperandSize;
+	public Constants.DataSize DataSize;
 	public Operand? Operand1;
 	public Operand? Operand2;
 	public Constants.Condition Condition;
@@ -14,7 +14,7 @@ internal struct DecodedOperation
 	public void Reset()
 	{
 		Operation = Constants.Operation.None;
-		OperandSize = Constants.OperandSize.Byte;
+		DataSize = Constants.DataSize.Byte;
 		Operand1 = null;
 		Operand2 = null;
 		Condition = Constants.Condition.Unconditional;

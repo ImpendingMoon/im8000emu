@@ -29,7 +29,7 @@ internal static class Constants
 		Carry = 0b0000_0001,
 	}
 
-	public enum OperandSize
+	public enum DataSize
 	{
 		Byte,
 		Word,

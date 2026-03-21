@@ -14,7 +14,7 @@ internal partial class CPU
 		_currentOperation.Reset();
 		_currentOperation.BaseAddress = address;
 
-		MemoryResult fetchResult = ReadMemory(address, Constants.OperandSize.Word);
+		MemoryResult fetchResult = ReadMemory(address, Constants.DataSize.Word);
 		ushort instructionWord = (ushort)fetchResult.Value;
 		_currentOperation.FetchCycles = fetchResult.Cycles;
 		_currentOperation.OpcodeLength = 2;
@@ -148,7 +148,7 @@ internal partial class CPU
 
 		// Decode operand size
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
-		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+		decodedOperation.DataSize = DecodeOperandSize(sizeSelector);
 
 		// Decode destination
 		byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
@@ -159,7 +159,7 @@ internal partial class CPU
 		}
 		decodedOperation.Operand1 = new Operand
 		{
-			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
+			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.DataSize),
 		};
 
 		// Decode source
@@ -168,14 +168,14 @@ internal partial class CPU
 		{
 			decodedOperation.Operand2 = new Operand
 			{
-				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize),
+				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.DataSize),
 			};
 		}
 		else
 		{
 			decodedOperation.Operand2 = new Operand
 			{
-				Target = DecodeRegisterTarget(operand2Selector, decodedOperation.OperandSize),
+				Target = DecodeRegisterTarget(operand2Selector, decodedOperation.DataSize),
 			};
 		}
 	}
@@ -227,7 +227,7 @@ internal partial class CPU
 
 		// Decode operand size
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
-		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+		decodedOperation.DataSize = DecodeOperandSize(sizeSelector);
 
 		// Decode indirect (address) operand
 		var indirectOperand = new Operand
@@ -238,16 +238,16 @@ internal partial class CPU
 		byte indirectOperandSelector = (byte)(instructionWord >> 13);
 		if (indirectOperandSelector == 0b111)
 		{
-			indirectOperand.Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord);
+			indirectOperand.Immediate = FetchImmediate(ref decodedOperation, Constants.DataSize.DWord);
 		}
 		else
 		{
-			indirectOperand.Target = DecodeRegisterTarget(indirectOperandSelector, Constants.OperandSize.DWord);
+			indirectOperand.Target = DecodeRegisterTarget(indirectOperandSelector, Constants.DataSize.DWord);
 
 			// IX, IY, SP always have a displacement. Displacements are always before immediate values.
 			if (indirectOperand.Target >= Constants.RegisterTargets.IX)
 			{
-				indirectOperand.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.OperandSize.Word);
+				indirectOperand.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.DataSize.Word);
 			}
 		}
 
@@ -267,11 +267,11 @@ internal partial class CPU
 				throw new DecoderException("0b111 is not a valid source target with direct addressing");
 			}
 
-			registerOperand.Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize);
+			registerOperand.Immediate = FetchImmediate(ref decodedOperation, decodedOperation.DataSize);
 		}
 		else
 		{
-			registerOperand.Target = DecodeRegisterTarget(registerOperandSelector, decodedOperation.OperandSize);
+			registerOperand.Target = DecodeRegisterTarget(registerOperandSelector, decodedOperation.DataSize);
 		}
 
 		if (isLoad)
@@ -322,7 +322,7 @@ internal partial class CPU
 
 		// Decode operand size
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
-		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+		decodedOperation.DataSize = DecodeOperandSize(sizeSelector);
 
 		// Decode target
 		byte operand1Selector = (byte)((instructionWord >> 10) & 0b00000111);
@@ -333,7 +333,7 @@ internal partial class CPU
 		}
 		decodedOperation.Operand1 = new Operand
 		{
-			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
+			Target = DecodeRegisterTarget(operand1Selector, decodedOperation.DataSize),
 		};
 	}
 
@@ -371,7 +371,7 @@ internal partial class CPU
 
 		// Decode operand size
 		byte sizeSelector = (byte)((instructionWord >> 8) & 0b00000011);
-		decodedOperation.OperandSize = DecodeOperandSize(sizeSelector);
+		decodedOperation.DataSize = DecodeOperandSize(sizeSelector);
 
 		// Decode target (indirect)
 		var operand1 = new Operand
@@ -382,15 +382,15 @@ internal partial class CPU
 		byte operand1Selector = (byte)(instructionWord >> 13);
 		if (operand1Selector == 0b111)
 		{
-			operand1.Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord);
+			operand1.Immediate = FetchImmediate(ref decodedOperation, Constants.DataSize.DWord);
 		}
 		else
 		{
-			operand1.Target = DecodeRegisterTarget(operand1Selector, Constants.OperandSize.DWord);
+			operand1.Target = DecodeRegisterTarget(operand1Selector, Constants.DataSize.DWord);
 			// IX, IY, SP always have a displacement.
 			if (operand1.Target >= Constants.RegisterTargets.IX)
 			{
-				operand1.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.OperandSize.Word);
+				operand1.Displacement = (short)FetchImmediate(ref decodedOperation, Constants.DataSize.Word);
 			}
 		}
 
@@ -430,11 +430,11 @@ internal partial class CPU
 		decodedOperation.Condition = DecodeCondition(conditionSelector);
 
 		// Size implied by operation
-		decodedOperation.OperandSize = decodedOperation.Operation switch
+		decodedOperation.DataSize = decodedOperation.Operation switch
 		{
-			Constants.Operation.JR_s8 or Constants.Operation.CALLR_s8 => Constants.OperandSize.Byte,
-			Constants.Operation.JR or Constants.Operation.CALLR => Constants.OperandSize.Word,
-			_ => Constants.OperandSize.DWord,
+			Constants.Operation.JR_s8 or Constants.Operation.CALLR_s8 => Constants.DataSize.Byte,
+			Constants.Operation.JR or Constants.Operation.CALLR => Constants.DataSize.Word,
+			_ => Constants.DataSize.DWord,
 		};
 
 		// Decode target
@@ -443,14 +443,14 @@ internal partial class CPU
 		{
 			decodedOperation.Operand1 = new Operand
 			{
-				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.OperandSize),
+				Immediate = FetchImmediate(ref decodedOperation, decodedOperation.DataSize),
 			};
 		}
 		else
 		{
 			decodedOperation.Operand1 = new Operand
 			{
-				Target = DecodeRegisterTarget(operand1Selector, decodedOperation.OperandSize),
+				Target = DecodeRegisterTarget(operand1Selector, decodedOperation.DataSize),
 			};
 		}
 	}
@@ -501,10 +501,10 @@ internal partial class CPU
 				// RST takes an immediate byte operand
 				if (decodedOperation.Operation == Constants.Operation.RST)
 				{
-					decodedOperation.OperandSize = Constants.OperandSize.Byte;
+					decodedOperation.DataSize = Constants.DataSize.Byte;
 					decodedOperation.Operand1 = new Operand
 					{
-						Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.Byte),
+						Immediate = FetchImmediate(ref decodedOperation, Constants.DataSize.Byte),
 					};
 				}
 				break;
@@ -540,10 +540,10 @@ internal partial class CPU
 				// LD_I_NN takes an immediate dword operand, LD_R_A and LD_A_R operate on implied registers
 				if (decodedOperation.Operation == Constants.Operation.LD_I_NN)
 				{
-					decodedOperation.OperandSize = Constants.OperandSize.DWord;
+					decodedOperation.DataSize = Constants.DataSize.DWord;
 					decodedOperation.Operand1 = new Operand
 					{
-						Immediate = FetchImmediate(ref decodedOperation, Constants.OperandSize.DWord),
+						Immediate = FetchImmediate(ref decodedOperation, Constants.DataSize.DWord),
 					};
 				}
 				break;
@@ -619,7 +619,7 @@ internal partial class CPU
 			_ => throw new DecoderException($"0b{operationSelector:B4} is not a valid single-byte operation selector"),
 		};
 
-		decodedOperation.OperandSize = Constants.OperandSize.Byte;
+		decodedOperation.DataSize = Constants.DataSize.Byte;
 
 		if (decodedOperation.Operation == Constants.Operation.NOP)
 		{
@@ -636,20 +636,20 @@ internal partial class CPU
 		}
 	}
 
-	private static Constants.OperandSize DecodeOperandSize(byte selector)
+	private static Constants.DataSize DecodeOperandSize(byte selector)
 	{
 		return selector switch
 		{
-			0b00 => Constants.OperandSize.Byte,
-			0b01 => Constants.OperandSize.Word,
-			0b10 => Constants.OperandSize.DWord,
+			0b00 => Constants.DataSize.Byte,
+			0b01 => Constants.DataSize.Word,
+			0b10 => Constants.DataSize.DWord,
 			_ => throw new DecoderException($"0b{selector:B} is not a valid operand size selector"),
 		};
 	}
 
-	private static Constants.RegisterTargets DecodeRegisterTarget(byte selector, Constants.OperandSize size)
+	private static Constants.RegisterTargets DecodeRegisterTarget(byte selector, Constants.DataSize size)
 	{
-		if (size is Constants.OperandSize.Byte or Constants.OperandSize.Word)
+		if (size is Constants.DataSize.Byte or Constants.DataSize.Word)
 		{
 			return selector switch
 			{

@@ -12,56 +12,28 @@ internal class MemoryBus
 		_mappings.Add(mapping);
 	}
 
-	public byte ReadByte(uint address)
+	public uint Read(uint address, Constants.DataSize size)
 	{
 		foreach (Mapping mapping in _mappings)
 		{
 			if (mapping.ContainsAddress(address))
 			{
 				uint offset = address - mapping.StartAddress;
-				return mapping.Device.ReadByte(offset);
-			}
-		}
-		return 0xFF;
-	}
-
-	public void WriteByte(uint address, byte value)
-	{
-		foreach (Mapping mapping in _mappings)
-		{
-			if (mapping.ContainsAddress(address))
-			{
-				uint offset = address - mapping.StartAddress;
-				mapping.Device.WriteByte(offset, value);
-			}
-		}
-	}
-
-	public Span<byte> ReadByteArray(uint address, uint length)
-	{
-		foreach (Mapping mapping in _mappings)
-		{
-			if (mapping.ContainsAddress(address))
-			{
-				uint offset = address - mapping.StartAddress;
-				return mapping.Device.ReadByteArray(offset, length);
+				return mapping.Device.Read(offset, size);
 			}
 		}
 
-		// Slow, but should be rare in well-behaved software
-		byte[] openBus = new byte[length];
-		Array.Fill<byte>(openBus, 0xFF);
-		return new Span<byte>(openBus);
+		return 0xFFFF_FFFF;
 	}
 
-	public void WriteByteArray(uint address, Span<byte> data)
+	public void Write(uint address, Constants.DataSize size, uint value)
 	{
 		foreach (Mapping mapping in _mappings)
 		{
 			if (mapping.ContainsAddress(address))
 			{
 				uint offset = address - mapping.StartAddress;
-				mapping.Device.WriteByteArray(offset, data);
+				mapping.Device.Write(offset, size, value);
 			}
 		}
 	}

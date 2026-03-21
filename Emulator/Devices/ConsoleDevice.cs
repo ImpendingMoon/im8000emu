@@ -22,8 +22,14 @@ internal class ConsoleDevice : IMemoryDevice
 
 	public uint Size => 4;
 
-	public byte ReadByte(uint address)
+	public ConsoleDevice()
 	{
+		Console.WriteLine("Virtual Console Device being used. Press Ctrl+D (EOF) to exit.");
+	}
+
+	public uint Read(uint address, Constants.DataSize _)
+	{
+		// Ignore size, we're a fully virtual device
 		uint offset = address % Size;
 		return offset switch
 		{
@@ -33,32 +39,14 @@ internal class ConsoleDevice : IMemoryDevice
 		};
 	}
 
-	public void WriteByte(uint address, byte value)
+	public void Write(uint address, Constants.DataSize _, uint value)
 	{
 		uint offset = address % Size;
 
 		if (offset == TxDataOffset)
 		{
-			_stdout.WriteByte(value);
+			_stdout.WriteByte((byte)value);
 			_stdout.Flush();
-		}
-	}
-
-	public Span<byte> ReadByteArray(uint address, uint length)
-	{
-		byte[] result = new byte[length];
-		for (uint i = 0; i < length; i++)
-		{
-			result[i] = ReadByte(address + i);
-		}
-		return result;
-	}
-
-	public void WriteByteArray(uint address, Span<byte> data)
-	{
-		for (int i = 0; i < data.Length; i++)
-		{
-			WriteByte(address + (uint)i, data[i]);
 		}
 	}
 
@@ -81,6 +69,13 @@ internal class ConsoleDevice : IMemoryDevice
 			return 0x00;
 		}
 
-		return (byte)Console.ReadKey(true).KeyChar;
+		ConsoleKeyInfo key = Console.ReadKey(true);
+
+		if (key.Key == ConsoleKey.D && key.Modifiers.HasFlag(ConsoleModifiers.Control))
+		{
+			Environment.Exit(1);
+		}
+
+		return (byte)key.KeyChar;
 	}
 }

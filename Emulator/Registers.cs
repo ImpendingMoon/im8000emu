@@ -68,38 +68,38 @@ internal sealed class Registers
 		_registerOffsets[(int)Constants.RegisterTargets.R] = 64;
 	}
 
-	public uint GetRegister(Constants.RegisterTargets reg, Constants.OperandSize size)
+	public uint GetRegister(Constants.RegisterTargets reg, Constants.DataSize size)
 	{
 		int i = _registerOffsets[(int)reg];
 
 		return size switch
 		{
-			Constants.OperandSize.Byte => _registerData[i],
-			Constants.OperandSize.Word => BinaryPrimitives.ReadUInt16LittleEndian(_registerData.AsSpan(i)),
-			Constants.OperandSize.DWord => BinaryPrimitives.ReadUInt32LittleEndian(_registerData.AsSpan(i)),
-			_ => throw new ArgumentException($"GetRegister does not support OperandSize {size}"),
+			Constants.DataSize.Byte => _registerData[i],
+			Constants.DataSize.Word => BinaryPrimitives.ReadUInt16LittleEndian(_registerData.AsSpan(i)),
+			Constants.DataSize.DWord => BinaryPrimitives.ReadUInt32LittleEndian(_registerData.AsSpan(i)),
+			_ => throw new ArgumentException($"GetRegister does not support DataSize {size}"),
 		};
 	}
 
-	public void SetRegister(Constants.RegisterTargets reg, Constants.OperandSize size, uint value)
+	public void SetRegister(Constants.RegisterTargets reg, Constants.DataSize size, uint value)
 	{
 		int i = _registerOffsets[(int)reg];
 
 		switch (size)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				_registerData[i] = (byte)value;
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				BinaryPrimitives.WriteUInt16LittleEndian(_registerData.AsSpan(i), (ushort)value);
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				BinaryPrimitives.WriteUInt32LittleEndian(_registerData.AsSpan(i), value);
 				break;
@@ -138,14 +138,14 @@ internal sealed class Registers
 	{
 		var sb = new StringBuilder();
 
-		sb.Append($"AF: {GetRegister(Constants.RegisterTargets.AF, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"BC: {GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"DE: {GetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"HL: {GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"IX: {GetRegister(Constants.RegisterTargets.IX, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"IY: {GetRegister(Constants.RegisterTargets.IY, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"SP: {GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"PC: {GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord):X8} ");
+		sb.Append($"AF: {GetRegister(Constants.RegisterTargets.AF, Constants.DataSize.DWord):X8} ");
+		sb.Append($"BC: {GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord):X8} ");
+		sb.Append($"DE: {GetRegister(Constants.RegisterTargets.DE, Constants.DataSize.DWord):X8} ");
+		sb.Append($"HL: {GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord):X8} ");
+		sb.Append($"IX: {GetRegister(Constants.RegisterTargets.IX, Constants.DataSize.DWord):X8} ");
+		sb.Append($"IY: {GetRegister(Constants.RegisterTargets.IY, Constants.DataSize.DWord):X8} ");
+		sb.Append($"SP: {GetRegister(Constants.RegisterTargets.SP, Constants.DataSize.DWord):X8} ");
+		sb.Append($"PC: {GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord):X8} ");
 
 		return sb.ToString();
 	}
@@ -154,13 +154,13 @@ internal sealed class Registers
 	{
 		var sb = new StringBuilder();
 
-		sb.Append($"AF': {GetRegister(Constants.RegisterTargets.AF_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"BC': {GetRegister(Constants.RegisterTargets.BC_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"DE': {GetRegister(Constants.RegisterTargets.DE_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"HL': {GetRegister(Constants.RegisterTargets.HL_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"IX': {GetRegister(Constants.RegisterTargets.IX_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"IY': {GetRegister(Constants.RegisterTargets.IY_, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"SP': {GetRegister(Constants.RegisterTargets.SP_, Constants.OperandSize.DWord):X8} ");
+		sb.Append($"AF': {GetRegister(Constants.RegisterTargets.AF_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"BC': {GetRegister(Constants.RegisterTargets.BC_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"DE': {GetRegister(Constants.RegisterTargets.DE_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"HL': {GetRegister(Constants.RegisterTargets.HL_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"IX': {GetRegister(Constants.RegisterTargets.IX_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"IY': {GetRegister(Constants.RegisterTargets.IY_, Constants.DataSize.DWord):X8} ");
+		sb.Append($"SP': {GetRegister(Constants.RegisterTargets.SP_, Constants.DataSize.DWord):X8} ");
 
 		return sb.ToString();
 	}
@@ -169,8 +169,8 @@ internal sealed class Registers
 	{
 		var sb = new StringBuilder();
 
-		sb.Append($"I: {GetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord):X8} ");
-		sb.Append($"R: {GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word):X4} ");
+		sb.Append($"I: {GetRegister(Constants.RegisterTargets.I, Constants.DataSize.DWord):X8} ");
+		sb.Append($"R: {GetRegister(Constants.RegisterTargets.R, Constants.DataSize.Word):X4} ");
 
 		return sb.ToString();
 	}

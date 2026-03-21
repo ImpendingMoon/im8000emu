@@ -108,9 +108,9 @@ internal partial class CPU
 	{
 		Registers.ClearRegisters();
 		// Read reset vector
-		MemoryResult memoryResult = ReadMemory(0x00000000, Constants.OperandSize.DWord);
+		MemoryResult memoryResult = ReadMemory(0x00000000, Constants.DataSize.DWord);
 		uint resetVector = memoryResult.Value;
-		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, resetVector);
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, resetVector);
 	}
 
 	/// <summary>
@@ -144,7 +144,7 @@ internal partial class CPU
 		}
 
 		// Else decode the operation at the current PC
-		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 		// Overload defined in CPUDecode.cs
 		return Decode(pc);
 	}
@@ -156,14 +156,14 @@ internal partial class CPU
 	public int Execute(DecodedOperation instruction)
 	{
 		// Advance PC
-		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 		pc += (uint)instruction.OpcodeLength;
-		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 		// Advance Refresh
-		ushort r = (ushort)Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word);
+		ushort r = (ushort)Registers.GetRegister(Constants.RegisterTargets.R, Constants.DataSize.Word);
 		r++;
-		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word, r);
+		Registers.SetRegister(Constants.RegisterTargets.R, Constants.DataSize.Word, r);
 
 		if (_shouldEnableInterrupts)
 		{

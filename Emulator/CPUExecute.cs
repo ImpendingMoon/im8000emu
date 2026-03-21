@@ -53,12 +53,12 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		MemoryResult operandWrite = WritebackOperand(
 			operation.Operand1!.Value,
-			operation.OperandSize,
+			operation.DataSize,
 			operandRead.Value
 		);
 		cycles += operandWrite.Cycles;
@@ -76,20 +76,20 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead1 = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead1 = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead1.Cycles;
-		MemoryResult operandRead2 = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operandRead2 = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operandRead2.Cycles;
 
 		MemoryResult operandWrite1 = WritebackOperand(
 			operation.Operand1!.Value,
-			operation.OperandSize,
+			operation.DataSize,
 			operandRead2.Value
 		);
 		cycles += operandWrite1.Cycles;
 		MemoryResult operandWrite2 = WritebackOperand(
 			operation.Operand2!.Value,
-			operation.OperandSize,
+			operation.DataSize,
 			operandRead1.Value
 		);
 		cycles += operandWrite2.Cycles;
@@ -110,12 +110,12 @@ internal partial class CPU
 			throw new ArgumentException("EX_Alt can only operate on register targets");
 		}
 
-		if (operation.OperandSize == Constants.OperandSize.Byte)
+		if (operation.DataSize == Constants.DataSize.Byte)
 		{
 			throw new ArgumentException("EX_Alt cannot be used with byte operands");
 		}
 
-		ExchangeWithAlternate(operation.Operand1!.Value.Target.Value, operation.OperandSize);
+		ExchangeWithAlternate(operation.Operand1!.Value.Target.Value, operation.DataSize);
 
 		return operation.FetchCycles + 1;
 	}
@@ -128,9 +128,9 @@ internal partial class CPU
 			throw new ArgumentException("EXX requires no operands");
 		}
 
-		ExchangeWithAlternate(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
-		ExchangeWithAlternate(Constants.RegisterTargets.DE, Constants.OperandSize.DWord);
-		ExchangeWithAlternate(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.BC, Constants.DataSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.DE, Constants.DataSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		return operation.FetchCycles + 1;
 	}
@@ -143,9 +143,9 @@ internal partial class CPU
 			throw new ArgumentException("EXI requires no operands");
 		}
 
-		ExchangeWithAlternate(Constants.RegisterTargets.IX, Constants.OperandSize.DWord);
-		ExchangeWithAlternate(Constants.RegisterTargets.IY, Constants.OperandSize.DWord);
-		ExchangeWithAlternate(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.IX, Constants.DataSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.IY, Constants.DataSize.DWord);
+		ExchangeWithAlternate(Constants.RegisterTargets.SP, Constants.DataSize.DWord);
 
 		return operation.FetchCycles + 1;
 	}
@@ -160,28 +160,28 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint value = operandRead.Value;
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte temp = (byte)(value >> 4);
 				temp |= (byte)(value << 4);
 				value = temp;
 				break;
 			}
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort temp = (ushort)(value >> 8);
 				temp |= (ushort)(value << 8);
 				value = temp;
 				break;
 			}
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				uint temp = value >> 16;
 				temp |= value << 16;
@@ -190,7 +190,7 @@ internal partial class CPU
 			}
 		}
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, value);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, value);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -204,14 +204,14 @@ internal partial class CPU
 			throw new ArgumentException("PUSH requires one operand");
 		}
 
-		if (operation.OperandSize != Constants.OperandSize.DWord)
+		if (operation.DataSize != Constants.DataSize.DWord)
 		{
 			throw new ArgumentException("PUSH only operates on DWord operands");
 		}
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		cycles += Internal_Push(operandRead.Value);
@@ -227,7 +227,7 @@ internal partial class CPU
 			throw new ArgumentException("POP requires one operand");
 		}
 
-		if (operation.OperandSize != Constants.OperandSize.DWord)
+		if (operation.DataSize != Constants.DataSize.DWord)
 		{
 			throw new ArgumentException("POP only operates on DWord operands");
 		}
@@ -238,7 +238,7 @@ internal partial class CPU
 		cycles += popRead.Cycles;
 
 		// Write to destination
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, popRead.Value);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, popRead.Value);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -257,24 +257,24 @@ internal partial class CPU
 		// OUT, Operand1 is indirect
 		if (operation.Operand1!.Value.Indirect)
 		{
-			MemoryResult valueRead = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+			MemoryResult valueRead = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 			cycles += valueRead.Cycles;
 
 			// Use GetOperandValue internal logic directly, since this is the only instruction which uses I/O
 			uint port = GetEffectiveAddress(operation.Operand1!.Value);
-			MemoryResult ioWrite = WriteMemory(port, operation.OperandSize, valueRead.Value, true);
+			MemoryResult ioWrite = WriteMemory(port, operation.DataSize, valueRead.Value, true);
 			cycles += ioWrite.Cycles;
 		}
 		// IN, Operand2 is indirect
 		else if (operation.Operand2!.Value.Indirect)
 		{
 			uint port = GetEffectiveAddress(operation.Operand2!.Value);
-			MemoryResult ioRead = ReadMemory(port, operation.OperandSize, true);
+			MemoryResult ioRead = ReadMemory(port, operation.DataSize, true);
 			cycles += ioRead.Cycles;
 
 			MemoryResult operandWrite = WritebackOperand(
 				operation.Operand1!.Value,
-				operation.OperandSize,
+				operation.DataSize,
 				ioRead.Value
 			);
 			cycles += operandWrite.Cycles;
@@ -298,7 +298,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_LD(operation.OperandSize, true);
+		cycles += Internal_Block_LD(operation.DataSize, true);
 
 		return cycles;
 	}
@@ -313,7 +313,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_LD(operation.OperandSize, true);
+		cycles += Internal_Block_LD(operation.DataSize, true);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -329,7 +329,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_LD(operation.OperandSize, false);
+		cycles += Internal_Block_LD(operation.DataSize, false);
 
 		return cycles;
 	}
@@ -344,7 +344,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_LD(operation.OperandSize, false);
+		cycles += Internal_Block_LD(operation.DataSize, false);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -360,7 +360,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_CP(operation.OperandSize, true);
+		cycles += Internal_Block_CP(operation.DataSize, true);
 
 		return cycles;
 	}
@@ -375,7 +375,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_CP(operation.OperandSize, true);
+		cycles += Internal_Block_CP(operation.DataSize, true);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -391,7 +391,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_CP(operation.OperandSize, false);
+		cycles += Internal_Block_CP(operation.DataSize, false);
 
 		return cycles;
 	}
@@ -406,7 +406,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_CP(operation.OperandSize, false);
+		cycles += Internal_Block_CP(operation.DataSize, false);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -422,7 +422,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_TST(operation.OperandSize, true);
+		cycles += Internal_Block_TST(operation.DataSize, true);
 
 		return cycles;
 	}
@@ -437,7 +437,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_TST(operation.OperandSize, true);
+		cycles += Internal_Block_TST(operation.DataSize, true);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -453,7 +453,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_TST(operation.OperandSize, false);
+		cycles += Internal_Block_TST(operation.DataSize, false);
 
 		return cycles;
 	}
@@ -468,7 +468,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_TST(operation.OperandSize, false);
+		cycles += Internal_Block_TST(operation.DataSize, false);
 		cycles += Internal_Block_Loop(operation);
 
 		return cycles;
@@ -484,7 +484,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_IN(operation.OperandSize, true);
+		cycles += Internal_Block_IN(operation.DataSize, true);
 
 		return cycles;
 	}
@@ -499,7 +499,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_IN(operation.OperandSize, true);
+		cycles += Internal_Block_IN(operation.DataSize, true);
 		cycles += Internal_IO_Block_Loop(operation);
 
 		return cycles;
@@ -515,7 +515,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_IN(operation.OperandSize, false);
+		cycles += Internal_Block_IN(operation.DataSize, false);
 
 		return cycles;
 	}
@@ -530,7 +530,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_IN(operation.OperandSize, false);
+		cycles += Internal_Block_IN(operation.DataSize, false);
 		cycles += Internal_IO_Block_Loop(operation);
 
 		return cycles;
@@ -546,7 +546,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_OUT(operation.OperandSize, true);
+		cycles += Internal_Block_OUT(operation.DataSize, true);
 
 		return cycles;
 	}
@@ -561,7 +561,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_OUT(operation.OperandSize, true);
+		cycles += Internal_Block_OUT(operation.DataSize, true);
 		cycles += Internal_IO_Block_Loop(operation);
 
 		return cycles;
@@ -577,7 +577,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_OUT(operation.OperandSize, false);
+		cycles += Internal_Block_OUT(operation.DataSize, false);
 
 		return cycles;
 	}
@@ -592,7 +592,7 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		cycles += Internal_Block_OUT(operation.OperandSize, false);
+		cycles += Internal_Block_OUT(operation.DataSize, false);
 		cycles += Internal_IO_Block_Loop(operation);
 
 		return cycles;
@@ -608,18 +608,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -634,7 +634,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -649,7 +649,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -668,7 +668,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_ADD is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_ADD is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -676,7 +676,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -692,18 +692,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -719,7 +719,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -735,7 +735,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -755,7 +755,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_ADC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_ADC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -763,7 +763,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -779,18 +779,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -805,7 +805,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -820,7 +820,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -839,7 +839,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SUB is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SUB is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -847,7 +847,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -863,18 +863,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -890,7 +890,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -906,7 +906,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -926,7 +926,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SBC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SBC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -934,7 +934,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -950,13 +950,13 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
-		cycles += Internal_CP(operand1Read.Value, operand2Read.Value, operation.OperandSize);
+		cycles += Internal_CP(operand1Read.Value, operand2Read.Value, operation.DataSize);
 
 		// No writeback
 
@@ -973,15 +973,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operandRead.Value;
 				byte b = 1;
@@ -995,7 +995,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operandRead.Value;
 				ushort b = 1;
@@ -1009,7 +1009,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1027,7 +1027,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_INC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_INC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1035,7 +1035,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1051,15 +1051,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = 1;
@@ -1073,7 +1073,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = 1;
@@ -1087,7 +1087,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1106,7 +1106,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_DEC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_DEC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1114,7 +1114,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1130,7 +1130,7 @@ internal partial class CPU
 		}
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
-		ushort a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		ushort a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte);
 
 		ALUFlagState flagState = GetALUFlags();
 
@@ -1187,7 +1187,7 @@ internal partial class CPU
 		flagState.ParityOverflow = BitHelper.IsParityEven(a);
 
 		UpdateALUFlags(flagState);
-		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, a);
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte, a);
 
 		return cycles;
 	}
@@ -1203,15 +1203,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operandRead.Value;
 
@@ -1225,7 +1225,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operandRead.Value;
 
@@ -1239,7 +1239,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1257,7 +1257,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_NEG is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_NEG is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1265,7 +1265,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1281,21 +1281,21 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result;
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operandRead.Value;
 				result = (ushort)BitHelper.SignExtend(a, 8);
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1306,11 +1306,11 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_EXT is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_EXT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1326,15 +1326,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				int multiplicand = (int)(operandRead.Value & 0xFF);
 				int multiplier = (int)((operandRead.Value >> 8) & 0xFF);
@@ -1351,7 +1351,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				int multiplicand = (int)(operandRead.Value & 0xFFFF);
 				int multiplier = (int)((operandRead.Value >> 16) & 0xFFFF);
@@ -1370,7 +1370,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_MLT is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_MLT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1379,7 +1379,7 @@ internal partial class CPU
 		flagState.Zero = result == 0; // Technically undefined, probably want to define. Seems useful.
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1395,14 +1395,14 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result = 0;
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				uint dividend = (operandRead.Value >> 8) & 0xFF;
 				uint divisor = operandRead.Value & 0xFF;
@@ -1428,7 +1428,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				uint dividend = (operandRead.Value >> 16) & 0xFFFF;
 				uint divisor = operandRead.Value & 0xFFFF;
@@ -1456,11 +1456,11 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_DIV is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_DIV is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1476,14 +1476,14 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
 		uint result = 0;
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				int dividend = (int)((operandRead.Value >> 8) & 0xFF);
 				int divisor = (int)(operandRead.Value & 0xFF);
@@ -1513,7 +1513,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				int dividend = (int)((operandRead.Value >> 16) & 0xFFFF);
 				int divisor = (int)(operandRead.Value & 0xFFFF);
@@ -1546,12 +1546,12 @@ internal partial class CPU
 			default:
 			{
 				throw new ArgumentException(
-					$"Execute_SDIV is not implemented for operand size {operation.OperandSize}"
+					$"Execute_SDIV is not implemented for operand size {operation.DataSize}"
 				);
 			}
 		}
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1567,18 +1567,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -1590,7 +1590,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -1602,7 +1602,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1618,7 +1618,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_AND is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_AND is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1629,7 +1629,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1645,18 +1645,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -1668,7 +1668,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -1680,7 +1680,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1696,7 +1696,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_OR is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_OR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1707,7 +1707,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1723,18 +1723,18 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 				byte b = (byte)operand2Read.Value;
@@ -1746,7 +1746,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 				ushort b = (ushort)operand2Read.Value;
@@ -1758,7 +1758,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1774,7 +1774,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_XOR is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_XOR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1785,7 +1785,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1801,13 +1801,13 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
-		cycles += Internal_TST(operand1Read.Value, operand2Read.Value, operation.OperandSize);
+		cycles += Internal_TST(operand1Read.Value, operand2Read.Value, operation.DataSize);
 
 		return cycles;
 	}
@@ -1822,15 +1822,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
 		uint result;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				byte a = (byte)operand1Read.Value;
 
@@ -1841,7 +1841,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				ushort a = (ushort)operand1Read.Value;
 
@@ -1852,7 +1852,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -1867,7 +1867,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_CPL is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1878,7 +1878,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1894,30 +1894,30 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint bit = operand2Read.Value;
 		ALUFlagState flagState = GetALUFlags();
 
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				break;
@@ -1925,7 +1925,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_BIT is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_BIT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1947,28 +1947,28 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint bit = operand2Read.Value;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				break;
@@ -1976,14 +1976,14 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SET is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SET is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
 		uint result = operand1Read.Value;
 		result |= (uint)(1 << (int)bit);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -1999,28 +1999,28 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		uint bit = operand2Read.Value;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				break;
@@ -2028,14 +2028,14 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RES is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_RES is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
 		uint result = operand1Read.Value;
 		result &= ~(uint)(1 << (int)bit);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2051,19 +2051,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2083,7 +2083,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2102,7 +2102,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2123,7 +2123,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RLC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_RLC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2133,7 +2133,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2149,19 +2149,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2181,7 +2181,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2200,7 +2200,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2221,7 +2221,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RRC is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_RRC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2231,7 +2231,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2247,19 +2247,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2280,7 +2280,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2300,7 +2300,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2322,7 +2322,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2332,7 +2332,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2348,19 +2348,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2380,7 +2380,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2399,7 +2399,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2420,7 +2420,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_RR is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_RR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2430,7 +2430,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2446,19 +2446,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2478,7 +2478,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2497,7 +2497,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2518,7 +2518,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2528,7 +2528,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2544,19 +2544,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2576,7 +2576,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2595,7 +2595,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2616,7 +2616,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SRA is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SRA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2626,7 +2626,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2642,19 +2642,19 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+		MemoryResult operand1Read = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 		cycles += operand1Read.Cycles;
 
-		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.OperandSize);
+		MemoryResult operand2Read = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operand2Read.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
 
 		uint bit = operand2Read.Value;
 		uint result;
-		switch (operation.OperandSize)
+		switch (operation.DataSize)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				bit &= 0b111;
 				byte a = (byte)operand1Read.Value;
@@ -2674,7 +2674,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				bit &= 0b1111;
 				ushort a = (ushort)operand1Read.Value;
@@ -2693,7 +2693,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				bit &= 0b11111;
 				uint a = operand1Read.Value;
@@ -2714,7 +2714,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException($"Execute_SRL is not implemented for operand size {operation.OperandSize}");
+				throw new ArgumentException($"Execute_SRL is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2724,7 +2724,7 @@ internal partial class CPU
 		flagState.Zero = result == 0;
 		UpdateALUFlags(flagState);
 
-		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.OperandSize, result);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, result);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -2740,11 +2740,11 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
-		MemoryResult readHL = ReadMemory(hl, Constants.OperandSize.Byte);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
+		MemoryResult readHL = ReadMemory(hl, Constants.DataSize.Byte);
 		cycles += readHL.Cycles;
 
-		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte);
 		byte mem = (byte)readHL.Value;
 
 		byte aLow = (byte)(a & 0x0F);
@@ -2754,7 +2754,7 @@ internal partial class CPU
 		byte newA = (byte)((a & 0xF0) | memHigh);
 		byte newMem = (byte)((memLow << 4) | aLow);
 
-		MemoryResult writeHL = WriteMemory(hl, Constants.OperandSize.Byte, newMem);
+		MemoryResult writeHL = WriteMemory(hl, Constants.DataSize.Byte, newMem);
 		cycles += writeHL.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
@@ -2765,7 +2765,7 @@ internal partial class CPU
 		flagState.Subtract = false;
 		UpdateALUFlags(flagState);
 
-		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, newA);
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte, newA);
 
 		cycles += 2; // Extra cycles for nibble manipulation
 		return cycles;
@@ -2781,11 +2781,11 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
-		MemoryResult readHL = ReadMemory(hl, Constants.OperandSize.Byte);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
+		MemoryResult readHL = ReadMemory(hl, Constants.DataSize.Byte);
 		cycles += readHL.Cycles;
 
-		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte);
+		byte a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte);
 		byte mem = (byte)readHL.Value;
 
 		byte aLow = (byte)(a & 0x0F);
@@ -2795,7 +2795,7 @@ internal partial class CPU
 		byte newA = (byte)((a & 0xF0) | memLow);
 		byte newMem = (byte)((aLow << 4) | memHigh);
 
-		MemoryResult writeHL = WriteMemory(hl, Constants.OperandSize.Byte, newMem);
+		MemoryResult writeHL = WriteMemory(hl, Constants.DataSize.Byte, newMem);
 		cycles += writeHL.Cycles;
 
 		ALUFlagState flagState = GetALUFlags();
@@ -2806,7 +2806,7 @@ internal partial class CPU
 		flagState.Subtract = false;
 		UpdateALUFlags(flagState);
 
-		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Byte, newA);
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte, newA);
 
 		cycles += 2; // Extra cycles for nibble manipulation
 		return cycles;
@@ -2830,10 +2830,10 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, addressRead.Value);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, addressRead.Value);
 		}
 
 		return cycles;
@@ -2851,14 +2851,14 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
 			int displacement = (int)BitHelper.SignExtend(addressRead.Value, 8);
 
-			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc += displacement;
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, (uint)pc);
 
 			cycles += 2;
 		}
@@ -2878,14 +2878,14 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
 			int displacement = (int)BitHelper.SignExtend(addressRead.Value, 16);
 
-			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc += displacement;
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, (uint)pc);
 
 			cycles += 2;
 		}
@@ -2905,13 +2905,13 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			cycles += Internal_Push(pc);
 
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, addressRead.Value);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, addressRead.Value);
 		}
 
 		return cycles;
@@ -2929,15 +2929,15 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			cycles += Internal_Push(pc);
 
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
 			int displacement = (int)BitHelper.SignExtend(addressRead.Value, 8);
 			pc = (uint)((int)pc + displacement);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 			cycles += 2;
 		}
@@ -2957,15 +2957,15 @@ internal partial class CPU
 
 		if (IsConditionTrue(operation.Condition))
 		{
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			cycles += Internal_Push(pc);
 
-			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.OperandSize);
+			MemoryResult addressRead = GetOperandValue(operation.Operand1!.Value, operation.DataSize);
 			cycles += addressRead.Cycles;
 
 			int displacement = (int)BitHelper.SignExtend(addressRead.Value, 16);
 			pc = (uint)((int)pc + displacement);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 			cycles += 2;
 		}
@@ -2989,7 +2989,7 @@ internal partial class CPU
 		{
 			MemoryResult popRead = Internal_Pop();
 			cycles += popRead.Cycles;
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, popRead.Value);
 		}
 
 		return cycles;
@@ -3012,7 +3012,7 @@ internal partial class CPU
 
 		MemoryResult popRead = Internal_Pop();
 		cycles += popRead.Cycles;
-		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, popRead.Value);
 
 		return cycles;
 	}
@@ -3034,7 +3034,7 @@ internal partial class CPU
 
 		MemoryResult popRead = Internal_Pop();
 		cycles += popRead.Cycles;
-		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, popRead.Value);
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, popRead.Value);
 
 		return cycles;
 	}
@@ -3054,15 +3054,15 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		ushort b = (ushort)Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
+		ushort b = (ushort)Registers.GetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word);
 		b--;
-		Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
+		Registers.SetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word, b);
 
 		if (b != 0)
 		{
-			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			int pc = (int)Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc += (int)BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, (uint)pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, (uint)pc);
 			cycles += 2;
 		}
 
@@ -3084,13 +3084,13 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word);
 
 		if (a != 0)
 		{
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc += BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 			cycles += 2;
 		}
 
@@ -3112,13 +3112,13 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
+		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word);
 
 		if (a == 0)
 		{
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc += BitHelper.SignExtend(operation.Operand1!.Value.Immediate.Value, 8);
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 			cycles += 2;
 		}
 
@@ -3258,10 +3258,10 @@ internal partial class CPU
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, Constants.OperandSize.DWord);
+		MemoryResult operandRead = GetOperandValue(operation.Operand1!.Value, Constants.DataSize.DWord);
 		cycles += operandRead.Cycles;
 
-		Registers.SetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord, operandRead.Value);
+		Registers.SetRegister(Constants.RegisterTargets.I, Constants.DataSize.DWord, operandRead.Value);
 
 		return cycles;
 	}
@@ -3271,8 +3271,8 @@ internal partial class CPU
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint a = Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
-		Registers.SetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word, a);
+		uint a = Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word);
+		Registers.SetRegister(Constants.RegisterTargets.R, Constants.DataSize.Word, a);
 
 		return cycles;
 	}
@@ -3282,7 +3282,7 @@ internal partial class CPU
 	{
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		uint r = Registers.GetRegister(Constants.RegisterTargets.R, Constants.OperandSize.Word);
+		uint r = Registers.GetRegister(Constants.RegisterTargets.R, Constants.DataSize.Word);
 
 		// Z80 sets flags and I don't know why. Don't like that.
 		// ALUFlagState flagState = GetALUFlags();
@@ -3293,18 +3293,18 @@ internal partial class CPU
 		// flagState.ParityOverflow = Registers.GetFlag(Constants.FlagMasks.EnableInterrupts);
 		// UpdateALUFlags(flagState);
 
-		Registers.SetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word, r);
+		Registers.SetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word, r);
 
 		return cycles;
 	}
 
-	private int Internal_Block_LD(Constants.OperandSize size, bool increment)
+	private int Internal_Block_LD(Constants.DataSize size, bool increment)
 	{
 		int cycles = 0;
 
-		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
-		uint de = Registers.GetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord);
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord);
+		uint de = Registers.GetRegister(Constants.RegisterTargets.DE, Constants.DataSize.DWord);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		MemoryResult readHL = ReadMemory(hl, size);
 		cycles += readHL.Cycles;
@@ -3315,10 +3315,10 @@ internal partial class CPU
 
 		uint adjustAmount = size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
-			_ => throw new Exception($"Internal_Block_LD is not implemented for OperandSize {size}"),
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
+			_ => throw new Exception($"Internal_Block_LD is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3344,20 +3344,20 @@ internal partial class CPU
 		// Extra cycle for register writeback
 		cycles++;
 
-		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
-		Registers.SetRegister(Constants.RegisterTargets.DE, Constants.OperandSize.DWord, de);
-		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord, bc);
+		Registers.SetRegister(Constants.RegisterTargets.DE, Constants.DataSize.DWord, de);
+		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord, hl);
 
 		return cycles;
 	}
 
-	private int Internal_Block_CP(Constants.OperandSize size, bool increment)
+	private int Internal_Block_CP(Constants.DataSize size, bool increment)
 	{
 		int cycles = 0;
 
-		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
-		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word);
+		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		MemoryResult readHL = ReadMemory(hl, size);
 		cycles += readHL.Cycles;
@@ -3368,10 +3368,10 @@ internal partial class CPU
 
 		uint adjustAmount = size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
-			_ => throw new Exception($"Block_CP is not implemented for OperandSize {size}"),
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
+			_ => throw new Exception($"Block_CP is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3393,19 +3393,19 @@ internal partial class CPU
 		// Extra cycle for register writeback
 		cycles++;
 
-		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
-		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord, bc);
+		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord, hl);
 
 		return cycles;
 	}
 
-	private int Internal_Block_TST(Constants.OperandSize size, bool increment)
+	private int Internal_Block_TST(Constants.DataSize size, bool increment)
 	{
 		int cycles = 0;
 
-		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.OperandSize.Word);
-		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord);
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		ushort a = (ushort)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Word);
+		uint bc = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		MemoryResult readHL = ReadMemory(hl, size);
 		cycles += readHL.Cycles;
@@ -3416,10 +3416,10 @@ internal partial class CPU
 
 		uint adjustAmount = size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
-			_ => throw new Exception($"Block_TST is not implemented for OperandSize {size}"),
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
+			_ => throw new Exception($"Block_TST is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3441,19 +3441,19 @@ internal partial class CPU
 		// Extra cycle for register writeback
 		cycles++;
 
-		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.DWord, bc);
-		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+		Registers.SetRegister(Constants.RegisterTargets.BC, Constants.DataSize.DWord, bc);
+		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord, hl);
 
 		return cycles;
 	}
 
-	private int Internal_Block_IN(Constants.OperandSize size, bool increment)
+	private int Internal_Block_IN(Constants.DataSize size, bool increment)
 	{
 		int cycles = 0;
 
-		uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
-		uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.Word);
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word);
+		uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.Word);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		MemoryResult readIO = ReadMemory(c, size, true);
 		cycles += readIO.Cycles;
@@ -3465,10 +3465,10 @@ internal partial class CPU
 
 		uint adjustAmount = size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
-			_ => throw new Exception($"Internal_Block_IN is not implemented for OperandSize {size}"),
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
+			_ => throw new Exception($"Internal_Block_IN is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3490,19 +3490,19 @@ internal partial class CPU
 		// Extra cycle for register writeback
 		cycles++;
 
-		Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
-		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+		Registers.SetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word, b);
+		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord, hl);
 
 		return cycles;
 	}
 
-	private int Internal_Block_OUT(Constants.OperandSize size, bool increment)
+	private int Internal_Block_OUT(Constants.DataSize size, bool increment)
 	{
 		int cycles = 0;
 
-		uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word);
-		uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.OperandSize.Word);
-		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord);
+		uint b = Registers.GetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word);
+		uint c = Registers.GetRegister(Constants.RegisterTargets.BC, Constants.DataSize.Word);
+		uint hl = Registers.GetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord);
 
 		MemoryResult readHL = ReadMemory(hl, size);
 		cycles += readHL.Cycles;
@@ -3514,10 +3514,10 @@ internal partial class CPU
 
 		uint adjustAmount = size switch
 		{
-			Constants.OperandSize.Byte => 1,
-			Constants.OperandSize.Word => 2,
-			Constants.OperandSize.DWord => 4,
-			_ => throw new Exception($"Internal_Block_OUT is not implemented for OperandSize {size}"),
+			Constants.DataSize.Byte => 1,
+			Constants.DataSize.Word => 2,
+			Constants.DataSize.DWord => 4,
+			_ => throw new Exception($"Internal_Block_OUT is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3539,13 +3539,13 @@ internal partial class CPU
 		// Extra cycle for register writeback
 		cycles++;
 
-		Registers.SetRegister(Constants.RegisterTargets.B, Constants.OperandSize.Word, b);
-		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.OperandSize.DWord, hl);
+		Registers.SetRegister(Constants.RegisterTargets.B, Constants.DataSize.Word, b);
+		Registers.SetRegister(Constants.RegisterTargets.HL, Constants.DataSize.DWord, hl);
 
 		return cycles;
 	}
 
-	private int Internal_CP(uint a, uint b, Constants.OperandSize size)
+	private int Internal_CP(uint a, uint b, Constants.DataSize size)
 	{
 		int cycles = 0;
 		uint result;
@@ -3553,7 +3553,7 @@ internal partial class CPU
 
 		switch (size)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				a = (byte)a;
 				b = (byte)b;
@@ -3568,7 +3568,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				a = (ushort)a;
 				b = (ushort)b;
@@ -3582,7 +3582,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -3608,7 +3608,7 @@ internal partial class CPU
 		return cycles;
 	}
 
-	private int Internal_TST(uint a, uint b, Constants.OperandSize size)
+	private int Internal_TST(uint a, uint b, Constants.DataSize size)
 	{
 		int cycles = 0;
 		uint result;
@@ -3616,7 +3616,7 @@ internal partial class CPU
 
 		switch (size)
 		{
-			case Constants.OperandSize.Byte:
+			case Constants.DataSize.Byte:
 			{
 				a = (byte)a;
 				b = (byte)b;
@@ -3628,7 +3628,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.Word:
+			case Constants.DataSize.Word:
 			{
 				a = (ushort)a;
 				b = (ushort)b;
@@ -3640,7 +3640,7 @@ internal partial class CPU
 				break;
 			}
 
-			case Constants.OperandSize.DWord:
+			case Constants.DataSize.DWord:
 			{
 				cycles += Config.DWordALUCost;
 
@@ -3673,9 +3673,9 @@ internal partial class CPU
 		if (Registers.GetFlag(Constants.FlagMasks.ParityOverflow))
 		{
 			// Undo PC increment (so we can re-fetch)
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc -= (uint)operation.OpcodeLength;
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 			// Additional cycle to do the PC decrement
 			return 1;
@@ -3691,9 +3691,9 @@ internal partial class CPU
 		if (!Registers.GetFlag(Constants.FlagMasks.Zero))
 		{
 			// Undo PC increment (so we can re-fetch)
-			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+			uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 			pc -= (uint)operation.OpcodeLength;
-			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, pc);
+			Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, pc);
 
 			// Additional cycle to do the PC decrement
 			return 1;
@@ -3707,13 +3707,13 @@ internal partial class CPU
 	{
 		int cycles = 0;
 
-		uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+		uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.DataSize.DWord);
 
 		sp -= 4;
-		MemoryResult pushWrite = WriteMemory(sp, Constants.OperandSize.DWord, value);
+		MemoryResult pushWrite = WriteMemory(sp, Constants.DataSize.DWord, value);
 		cycles += pushWrite.Cycles;
 
-		Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, sp);
+		Registers.SetRegister(Constants.RegisterTargets.SP, Constants.DataSize.DWord, sp);
 		cycles += 2;
 
 		return cycles;
@@ -3721,12 +3721,12 @@ internal partial class CPU
 
 	private MemoryResult Internal_Pop()
 	{
-		uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord);
+		uint sp = Registers.GetRegister(Constants.RegisterTargets.SP, Constants.DataSize.DWord);
 
-		MemoryResult popRead = ReadMemory(sp, Constants.OperandSize.DWord);
+		MemoryResult popRead = ReadMemory(sp, Constants.DataSize.DWord);
 
 		sp += 4;
-		Registers.SetRegister(Constants.RegisterTargets.SP, Constants.OperandSize.DWord, sp);
+		Registers.SetRegister(Constants.RegisterTargets.SP, Constants.DataSize.DWord, sp);
 		popRead.Cycles += 2;
 
 		return popRead;
@@ -3739,16 +3739,16 @@ internal partial class CPU
 		// Wake from halt if necessary
 		_isHalted = false;
 
-		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord);
+		uint pc = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord);
 		cycles += Internal_Push(pc);
 
-		uint vectorAddress = Registers.GetRegister(Constants.RegisterTargets.I, Constants.OperandSize.DWord) << 10;
+		uint vectorAddress = Registers.GetRegister(Constants.RegisterTargets.I, Constants.DataSize.DWord) << 10;
 		vectorAddress |= (uint)interruptNumber << 2;
 
-		MemoryResult vectorReadResult = ReadMemory(vectorAddress, Constants.OperandSize.DWord);
+		MemoryResult vectorReadResult = ReadMemory(vectorAddress, Constants.DataSize.DWord);
 
 		cycles += vectorReadResult.Cycles;
-		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.OperandSize.DWord, vectorReadResult.Value);
+		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, vectorReadResult.Value);
 
 		return cycles;
 	}
