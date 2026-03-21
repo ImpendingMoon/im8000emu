@@ -1,6 +1,4 @@
-﻿using System.Buffers.Binary;
-
-namespace im8000emu.Emulator;
+﻿namespace im8000emu.Emulator;
 
 // Contains shared private members between CPU.cs, CPUDecode.cs, and CPUExecute.cs
 internal partial class CPU
@@ -151,14 +149,13 @@ internal partial class CPU
 		// In software, easier to actually exchange the values
 		Constants.RegisterTargets alternate = Constants.RegisterToAlternate[register];
 
-		ushort primaryValue = (ushort)Registers.GetRegister(register, Constants.DataSize.Word);
-		ushort alternateValue = (ushort)Registers.GetRegister(alternate, Constants.DataSize.Word);
+		ushort primaryValue = (ushort)Registers.GetRegister(register, size);
+		ushort alternateValue = (ushort)Registers.GetRegister(alternate, size);
 
-		Registers.SetRegister(alternate, Constants.DataSize.Word, primaryValue);
-		Registers.SetRegister(register, Constants.DataSize.Word, alternateValue);
+		Registers.SetRegister(alternate, size, primaryValue);
+		Registers.SetRegister(register, size, alternateValue);
 	}
 
-	// ref parameter: DecodedOperation is now a struct, so we must pass by ref to mutate FetchCycles/OpcodeLength
 	private uint FetchImmediate(ref DecodedOperation decodedOperation, Constants.DataSize size)
 	{
 		MemoryResult immediateFetch = ReadMemory(

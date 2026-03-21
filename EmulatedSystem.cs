@@ -13,8 +13,8 @@ internal class EmulatedSystem
 	public EmulatedSystem(byte[] romData)
 	{
 
-		var biosRom = new MemoryDevice(romData, 0x10000, readOnly: true);
-			// 1980-era business micro, similar to the 5150.
+		var biosRom = new MemoryDevice(romData, 0x10000, true);
+		// 1980-era business micro, similar to the 5150.
 		var mainRam = new MemoryDevice(Config.MemorySize);
 		var videoRam = new MemoryDevice(Config.VideoMemorySize);
 

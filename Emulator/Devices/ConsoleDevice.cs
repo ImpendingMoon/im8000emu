@@ -20,12 +20,12 @@ internal class ConsoleDevice : IMemoryDevice
 
 	private readonly Stream _stdout = Console.OpenStandardOutput();
 
-	public uint Size => 4;
-
 	public ConsoleDevice()
 	{
 		Console.WriteLine("Virtual Console Device being used. Press Ctrl+D (EOF) to exit.");
 	}
+
+	public uint Size => 4;
 
 	public uint Read(uint address, Constants.DataSize _)
 	{

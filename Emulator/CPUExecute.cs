@@ -21,7 +21,7 @@ internal partial class CPU
 			return Internal_ServiceInterrupt(1);
 		}
 
-		byte number = _interruptBus.Acknowledge(nmi: false);
+		byte number = _interruptBus.Acknowledge(false);
 		return Internal_ServiceInterrupt(number);
 	}
 
@@ -32,7 +32,7 @@ internal partial class CPU
 		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, iff1);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
 
-		_interruptBus.Acknowledge(nmi: true);
+		_interruptBus.Acknowledge(true);
 		return Internal_ServiceInterrupt(2);
 	}
 
@@ -56,11 +56,7 @@ internal partial class CPU
 		MemoryResult operandRead = GetOperandValue(operation.Operand2!.Value, operation.DataSize);
 		cycles += operandRead.Cycles;
 
-		MemoryResult operandWrite = WritebackOperand(
-			operation.Operand1!.Value,
-			operation.DataSize,
-			operandRead.Value
-		);
+		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, operandRead.Value);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -272,11 +268,7 @@ internal partial class CPU
 			MemoryResult ioRead = ReadMemory(port, operation.DataSize, true);
 			cycles += ioRead.Cycles;
 
-			MemoryResult operandWrite = WritebackOperand(
-				operation.Operand1!.Value,
-				operation.DataSize,
-				ioRead.Value
-			);
+			MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, ioRead.Value);
 			cycles += operandWrite.Cycles;
 		}
 		// Some mysterious third thing that means I need to debug the decoder
@@ -1545,9 +1537,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new ArgumentException(
-					$"Execute_SDIV is not implemented for operand size {operation.DataSize}"
-				);
+				throw new ArgumentException($"Execute_SDIV is not implemented for operand size {operation.DataSize}");
 			}
 		}
 

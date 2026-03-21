@@ -50,8 +50,7 @@ internal class InterruptBus
 	///     Acknowledges the highest-priority pending interrupt of the requested class.
 	///     Calls OnInterruptAcknowledge on the device, which is expected to return its interrupt number and
 	///     de-assert its interrupt line. NMI interrupt numbers should be ignored by the CPU.
-	///
-	///		The CPU should always call HasPendingNmi/Interrupt before calling Acknowledge.
+	///     The CPU should always call HasPendingNmi/Interrupt before calling Acknowledge.
 	/// </summary>
 	/// <param name="nmi">
 	///     True acknowledges the highest-priority pending NMI, else maskable interrupt.

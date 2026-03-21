@@ -2,7 +2,6 @@
 
 internal partial class CPU
 {
-	private delegate int Executor(in DecodedOperation instruction);
 	private readonly Executor[] _operationExecutors;
 
 	public CPU(MemoryBus memoryBus, MemoryBus ioBus, InterruptBus interruptBus)
@@ -176,4 +175,6 @@ internal partial class CPU
 		int cycles = _operationExecutors[(int)instruction.Operation](in instruction);
 		return cycles;
 	}
+
+	private delegate int Executor(in DecodedOperation instruction);
 }

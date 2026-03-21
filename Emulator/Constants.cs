@@ -15,6 +15,13 @@ internal static class Constants
 		Unconditional,
 	}
 
+	public enum DataSize
+	{
+		Byte,
+		Word,
+		DWord,
+	}
+
 	public enum FlagMasks : ushort
 	{
 		EnableInterruptsSave = 0b0000_0010_0000_0000,
@@ -27,13 +34,6 @@ internal static class Constants
 		ParityOverflow = 0b0000_0100,
 		Subtract = 0b0000_0010,
 		Carry = 0b0000_0001,
-	}
-
-	public enum DataSize
-	{
-		Byte,
-		Word,
-		DWord,
 	}
 
 	public enum Operation
