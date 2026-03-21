@@ -1,9 +1,11 @@
 ﻿using System.Diagnostics;
+using Raylib_cs;
 
 namespace im8000emu;
 
 internal class Program
 {
+	[STAThread]
 	private static void Main(string[] args)
 	{
 		if (!BitConverter.IsLittleEndian)
@@ -26,6 +28,10 @@ internal class Program
 			return;
 		}
 
+		Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+		Raylib.InitWindow(640, 480, "im8000emu");
+		Raylib.SetWindowMinSize(640, 480);
+
 		byte[] romData = File.ReadAllBytes(filePath);
 		var system = new EmulatedSystem(romData);
 
@@ -36,11 +42,17 @@ internal class Program
 		double frameIntervalMs = 1000.0 / Config.TargetFramerate;
 		var stopwatch = new Stopwatch();
 
-		while (true)
+		while (!Raylib.WindowShouldClose())
 		{
 			stopwatch.Restart();
 
+			Raylib.BeginDrawing();
+			Raylib.ClearBackground(Color.White);
+
 			system.RunFrame();
+			Raylib.DrawText("This will eventually do something", 12, 12, 20, Color.DarkPurple);
+
+			Raylib.EndDrawing();
 
 			double elapsedMs = stopwatch.ElapsedMilliseconds;
 			double sleepMs = frameIntervalMs - elapsedMs;
@@ -54,5 +66,7 @@ internal class Program
 				Console.WriteLine("Emulator overloaded!");
 			}
 		}
+
+		Raylib.CloseWindow();
 	}
 }

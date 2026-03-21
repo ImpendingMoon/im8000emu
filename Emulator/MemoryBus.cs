@@ -25,7 +25,7 @@ internal class MemoryBus
 
 		if (Config.EnableStrictMode)
 		{
-			throw new MemoryAccessException(address, size, isWrite: false);
+			throw new MemoryAccessException(address, size, false);
 		}
 
 		return 0xFFFF_FFFF;
@@ -45,7 +45,7 @@ internal class MemoryBus
 
 		if (Config.EnableStrictMode)
 		{
-			throw new MemoryAccessException(address, size, isWrite: true);
+			throw new MemoryAccessException(address, size, true);
 		}
 	}
 

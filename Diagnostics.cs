@@ -80,18 +80,14 @@ internal class MemoryAccessException : EmulatedMachineException
 
 	internal class ReadOnlyViolationException : EmulatedMachineException
 	{
-		public ReadOnlyViolationException(uint address) : base(
-			$"Attempted write to read-only address 0x{address:X}"
-		)
+		public ReadOnlyViolationException(uint address) : base($"Attempted write to read-only address 0x{address:X}")
 		{
 		}
 	}
 
 	internal class WriteOnlyViolationException : EmulatedMachineException
 	{
-		public WriteOnlyViolationException(uint address) : base(
-			$"Attempted read from write-only address 0x{address:X}"
-		)
+		public WriteOnlyViolationException(uint address) : base($"Attempted read from write-only address 0x{address:X}")
 		{
 		}
 	}

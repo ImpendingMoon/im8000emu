@@ -660,7 +660,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_ADD is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_ADD is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -747,7 +749,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_ADC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_ADC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -831,7 +835,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SUB is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SUB is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -918,7 +924,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SBC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SBC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1019,7 +1027,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_INC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_INC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1098,7 +1108,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_DEC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_DEC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1249,7 +1261,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_NEG is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_NEG is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1298,7 +1312,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_EXT is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_EXT is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1362,7 +1378,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_MLT is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_MLT is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1448,7 +1466,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_DIV is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_DIV is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1537,7 +1557,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SDIV is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SDIV is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1608,7 +1630,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_AND is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_AND is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1686,7 +1710,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_OR is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_OR is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1764,7 +1790,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_XOR is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_XOR is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1857,7 +1885,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_CPL is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_CPL is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1915,7 +1945,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_BIT is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_BIT is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -1966,7 +1998,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SET is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SET is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2018,7 +2052,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_RES is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_RES is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2113,7 +2149,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_RLC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_RLC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2211,7 +2249,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_RRC is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_RRC is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2312,7 +2352,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SLA is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2410,7 +2452,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_RR is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_RR is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2508,7 +2552,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SLA is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2606,7 +2652,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SRA is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SRA is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
@@ -2704,7 +2752,9 @@ internal partial class CPU
 
 			default:
 			{
-				throw new InvalidExecutorOperandException($"Execute_SRL is not implemented for operand size {operation.DataSize}");
+				throw new InvalidExecutorOperandException(
+					$"Execute_SRL is not implemented for operand size {operation.DataSize}"
+				);
 			}
 		}
 
