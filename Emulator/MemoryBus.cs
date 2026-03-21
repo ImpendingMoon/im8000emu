@@ -6,78 +6,82 @@ internal class MemoryBus
 {
 	private readonly List<Mapping> _mappings = [];
 
-	/// <summary>
-	///     Map a device into the address space starting at <paramref name="baseAddress" />.
-	///     The device occupies [baseAddress, baseAddress + device.Size).
-	///     Throws if the region overlaps an existing mapping.
-	/// </summary>
-	public void Map(uint baseAddress, IMemoryDevice device)
+	public void AttachDevice(IMemoryDevice device, uint baseAddress, uint endAddress)
 	{
-		uint end = baseAddress + device.Size;
-
-		foreach (Mapping m in _mappings)
-		{
-			if (baseAddress < m.End && end > m.Base)
-			{
-				throw new InvalidOperationException(
-					$"Address range [0x{baseAddress:X}, 0x{end:X}) overlaps existing mapping " +
-					$"[0x{m.Base:X}, 0x{m.End:X}) for {m.Device.GetType().Name}."
-				);
-			}
-		}
-
-		_mappings.Add(new Mapping(baseAddress, end, device));
+		var mapping = new Mapping(device, baseAddress, endAddress);
+		_mappings.Add(mapping);
 	}
 
 	public byte ReadByte(uint address)
 	{
-		(IMemoryDevice device, uint offset) = Resolve(address, 1);
-		return device.ReadByte(offset);
+		foreach (Mapping mapping in _mappings)
+		{
+			if (mapping.ContainsAddress(address))
+			{
+				uint offset = address - mapping.StartAddress;
+				return mapping.Device.ReadByte(offset);
+			}
+		}
+		return 0xFF;
 	}
 
 	public void WriteByte(uint address, byte value)
 	{
-		(IMemoryDevice device, uint offset) = Resolve(address, 1);
-		device.WriteByte(offset, value);
+		foreach (Mapping mapping in _mappings)
+		{
+			if (mapping.ContainsAddress(address))
+			{
+				uint offset = address - mapping.StartAddress;
+				mapping.Device.WriteByte(offset, value);
+			}
+		}
 	}
 
 	public Span<byte> ReadByteArray(uint address, uint length)
 	{
-		(IMemoryDevice device, uint offset) = Resolve(address, length);
-		return device.ReadByteArray(offset, length);
+		foreach (Mapping mapping in _mappings)
+		{
+			if (mapping.ContainsAddress(address))
+			{
+				uint offset = address - mapping.StartAddress;
+				return mapping.Device.ReadByteArray(offset, length);
+			}
+		}
+
+		// Slow, but should be rare in well-behaved software
+		byte[] openBus = new byte[length];
+		Array.Fill<byte>(openBus, 0xFF);
+		return new Span<byte>(openBus);
 	}
 
 	public void WriteByteArray(uint address, Span<byte> data)
 	{
-		(IMemoryDevice device, uint offset) = Resolve(address, (uint)data.Length);
-		device.WriteByteArray(offset, data);
-	}
-
-	/// <summary>
-	///     Find the device that owns <paramref name="address" /> and return it along
-	///     with the device-local offset for that address.
-	/// </summary>
-	private (IMemoryDevice Device, uint Offset) Resolve(uint address, uint length)
-	{
-		foreach (Mapping m in _mappings)
+		foreach (Mapping mapping in _mappings)
 		{
-			if (address >= m.Base && address < m.End)
+			if (mapping.ContainsAddress(address))
 			{
-				uint offset = address - m.Base;
-
-				if ((offset + length) > m.Device.Size)
-				{
-					throw new ExecutionException(
-						$"Access 0x{address:X} is out of bounds for device {m.Device.GetType().Name} mapped at 0x{m.Base:X}."
-					);
-				}
-
-				return (m.Device, offset);
+				uint offset = address - mapping.StartAddress;
+				mapping.Device.WriteByteArray(offset, data);
 			}
 		}
-
-		throw new ExecutionException($"No device mapped at address 0x{address:X}.");
 	}
 
-	private readonly record struct Mapping(uint Base, uint End, IMemoryDevice Device);
+	private readonly struct Mapping
+	{
+		public Mapping(IMemoryDevice device, uint startAddress, uint endAddress)
+		{
+			Device = device;
+			StartAddress = startAddress;
+			EndAddress = endAddress;
+		}
+
+		public readonly IMemoryDevice Device;
+		public readonly uint StartAddress;
+		public readonly uint EndAddress;
+
+		public bool ContainsAddress(uint address)
+		{
+			return address >= StartAddress && address <= EndAddress;
+		}
+	}
 }
