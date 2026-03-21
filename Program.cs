@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
 using Raylib_cs;
 
 namespace im8000emu;
@@ -29,7 +30,7 @@ internal class Program
 		}
 
 		Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
-		Raylib.InitWindow(640, 480, "im8000emu");
+		Raylib.InitWindow(640 * 2, 480 * 2, "im8000emu");
 		Raylib.SetWindowMinSize(640, 480);
 
 		byte[] romData = File.ReadAllBytes(filePath);
@@ -46,13 +47,27 @@ internal class Program
 		{
 			stopwatch.Restart();
 
+			system.RunFrame();
+
+			Texture2D texture = Raylib.LoadTextureFromImage(system.Frame);
+
+			float scaleX = Raylib.GetScreenWidth() / (float)texture.Width;
+			float scaleY = Raylib.GetScreenHeight() / (float)texture.Height;
+
+			var src = new Rectangle(0, 0, texture.Width, texture.Height);
+			var dst = new Rectangle(
+				(Raylib.GetScreenWidth() - (texture.Width * scaleX)) / 2f,
+				(Raylib.GetScreenHeight() - (texture.Height * scaleY)) / 2f,
+				texture.Width * scaleX,
+				texture.Height * scaleY
+			);
+
 			Raylib.BeginDrawing();
 			Raylib.ClearBackground(Color.White);
-
-			system.RunFrame();
-			Raylib.DrawText("This will eventually do something", 12, 12, 20, Color.DarkPurple);
-
+			Raylib.DrawTexturePro(texture, src, dst, Vector2.Zero, 0f, Color.White);
 			Raylib.EndDrawing();
+
+			Raylib.UnloadTexture(texture);
 
 			double elapsedMs = stopwatch.ElapsedMilliseconds;
 			double sleepMs = frameIntervalMs - elapsedMs;

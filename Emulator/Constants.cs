@@ -153,6 +153,13 @@ internal static class Constants
 		PC, I, R,
 	}
 
+	public enum VideoMode
+	{
+		Text80x25 = 0x00,
+		Graphics640x200x1bpp = 0x10,
+		Graphics320x200x2bpp = 0x11,
+	}
+
 	public static readonly Dictionary<RegisterTargets, RegisterTargets> RegisterToAlternate = new()
 	{
 		{

@@ -1,11 +1,13 @@
 using im8000emu.Emulator;
 using im8000emu.Emulator.Devices;
+using Raylib_cs;
 
 namespace im8000emu;
 
 internal class EmulatedSystem
 {
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Config.TargetFramerate;
+	private readonly VideoDevice _videoCard;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
@@ -16,7 +18,6 @@ internal class EmulatedSystem
 		var biosRom = new MemoryDevice(romData, 0x10000, true);
 		// 1980-era business micro, similar to the 5150.
 		var mainRam = new MemoryDevice(Config.MemorySize);
-		var videoRam = new MemoryDevice(Config.VideoMemorySize);
 
 		var memoryBus = new MemoryBus();
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
@@ -24,13 +25,11 @@ internal class EmulatedSystem
 		memoryBus.AttachDevice(biosRom, 0x00_0000, 0x00_FFFF);
 		// At least 16 KB RAM
 		memoryBus.AttachDevice(mainRam, 0x20_0000, 0x3F_FFFF);
-		// Unused from 0x40_0000-0xDF_FFFF
-		// At least 4 KB VRAM
-		memoryBus.AttachDevice(videoRam, 0xE0_0000, 0xFF_FFFF);
+
+		_videoCard = new VideoDevice(memoryBus);
 
 		var ioBus = new MemoryBus();
-		// Temp, console device maps directly to stdin/out byte streams
-		ioBus.AttachDevice(new ConsoleDevice(), 0, 4);
+		ioBus.AttachDevice(_videoCard, 0, 4);
 
 		// TODO:
 		// - Z80 CTC, SIO, PIO, DMA
@@ -43,6 +42,8 @@ internal class EmulatedSystem
 		CPU = new CPU(memoryBus, ioBus, interruptBus);
 		CPU.Reset();
 	}
+
+	public Image Frame => _videoCard.GetFrame();
 
 	public CPU CPU { get; }
 
