@@ -23,6 +23,11 @@ internal class MemoryBus
 			}
 		}
 
+		if (Config.EnableStrictMode)
+		{
+			throw new MemoryAccessException(address, size, isWrite: false);
+		}
+
 		return 0xFFFF_FFFF;
 	}
 
@@ -34,7 +39,13 @@ internal class MemoryBus
 			{
 				uint offset = address - mapping.StartAddress;
 				mapping.Device.Write(offset, size, value);
+				return;
 			}
+		}
+
+		if (Config.EnableStrictMode)
+		{
+			throw new MemoryAccessException(address, size, isWrite: true);
 		}
 	}
 

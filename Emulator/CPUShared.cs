@@ -27,7 +27,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => aligned ? 1 : 2,
 			Constants.DataSize.DWord => aligned ? 2 : 3,
-			_ => throw new ArgumentException($"ReadMemory is not implemented for DataSize {size}"),
+			_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
 		};
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
@@ -50,7 +50,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => aligned ? 1 : 2,
 			Constants.DataSize.DWord => aligned ? 2 : 3,
-			_ => throw new ArgumentException($"WriteMemory is not implemented for DataSize {size}"),
+			_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
 		};
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
@@ -168,7 +168,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new ArgumentException($"{size} is not a valid operand size"),
+			_ => throw new InvalidSizeException(decodedOperation.BaseAddress, $"{size} is not a valid operand size"),
 		};
 		return immediateFetch.Value;
 	}
@@ -186,7 +186,7 @@ internal partial class CPU
 			Constants.Condition.P => !Registers.GetFlag(Constants.FlagMasks.Sign),
 			Constants.Condition.N => Registers.GetFlag(Constants.FlagMasks.Sign),
 			Constants.Condition.Unconditional => true,
-			_ => throw new ArgumentException($"IsConditionTrue is not implemented for condition {condition}"),
+			_ => throw new EmulatorException($"IsConditionTrue is not implemented for condition {condition}"),
 		};
 	}
 
