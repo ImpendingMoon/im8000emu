@@ -63,17 +63,10 @@ internal class VideoDevice : IMemoryDevice
 		_font = Raylib.LoadImage(fontPath);
 		_cursorRow = 0;
 		_cursorColumn = 0;
-		_enableDisplay = true;
-		_enableCursor = true;
+		_enableDisplay = false;
+		_enableCursor = false;
 		_currentFrameCycle = 0;
 		memoryBus.AttachDevice(_vram, 0xC0_0000, 0xFF_FFFF);
-
-		var rand = new Random();
-
-		for (uint i = 0; i < _vram.Size; i += 4)
-		{
-			_vram.Write(i, Constants.DataSize.DWord, (uint)rand.Next());
-		}
 	}
 
 	public uint Size => 4;

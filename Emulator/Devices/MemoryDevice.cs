@@ -14,6 +14,13 @@ internal class MemoryDevice : IMemoryDevice
 	{
 		_data = new byte[size];
 		_readOnly = readOnly;
+
+		var rand = new Random();
+
+		for (uint i = 0; i < _data.Length; i++)
+		{
+			_data[i] = (byte)rand.Next();
+		}
 	}
 
 	public MemoryDevice(byte[] data, int size, bool readOnly = false)

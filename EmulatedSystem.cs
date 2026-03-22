@@ -8,6 +8,7 @@ internal class EmulatedSystem
 {
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Constants.TargetFramerate;
 	private readonly VideoDevice _videoCard;
+	private readonly KeyboardDevice _keyboard;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
@@ -27,16 +28,16 @@ internal class EmulatedSystem
 		memoryBus.AttachDevice(mainRam, 0x20_0000, 0x3F_FFFF);
 
 		_videoCard = new VideoDevice(memoryBus);
+		_keyboard = new KeyboardDevice();
 
 		var ioBus = new MemoryBus();
-		ioBus.AttachDevice(_videoCard, 0, 4);
+		ioBus.AttachDevice(_videoCard, 0x00, 0x03);
+		ioBus.AttachDevice(_keyboard, 0x04, 0x07);
 
 		// TODO:
 		// - Z80 CTC, SIO, PIO, DMA
 		// - NEC uPD765A-compatible FDC, MC6845-based video card
 		// - New PIC to interface external interrupt sources with IM 2 bus
-		// - PC-AT keyboard logic. Probably just send scancodes in circular buffer.
-		//   This was a generic MCU on the PC-AT anyway.
 		var interruptBus = new InterruptBus();
 
 		CPU = new CPU(memoryBus, ioBus, interruptBus);
@@ -49,6 +50,9 @@ internal class EmulatedSystem
 
 	public void RunFrame()
 	{
+		// Read new keys
+		_keyboard.Refresh();
+
 		int budget = _cyclesPerFrame + _cycleRemainder;
 
 		while (budget > 0)
