@@ -39,6 +39,7 @@ internal class EmulatedSystem
 		// - NEC uPD765A-compatible FDC, MC6845-based video card
 		// - New PIC to interface external interrupt sources with IM 2 bus
 		var interruptBus = new InterruptBus();
+		interruptBus.RegisterDevice(_keyboard, 1);
 
 		CPU = new CPU(memoryBus, ioBus, interruptBus);
 		CPU.Reset();

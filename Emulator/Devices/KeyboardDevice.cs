@@ -116,11 +116,6 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 
 		while (key != KeyboardKey.Null)
 		{
-			if (_enableInterrupts)
-			{
-				RaisedInterrupt = true;
-			}
-
 			_currentlyPressedKeys.Add(key);
 			byte[] scancode = KeyToScancode(key);
 			if (scancode.Length > 0)
@@ -163,6 +158,11 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 
 	private void AddKey(byte[] scancode)
 	{
+		if (_enableInterrupts)
+		{
+			RaisedInterrupt = true;
+		}
+
 		foreach (byte b in scancode)
 		{
 			if (_buffer.Count < MaxBufferCapacity)
