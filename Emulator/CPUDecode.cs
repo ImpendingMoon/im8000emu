@@ -392,7 +392,7 @@ internal partial class CPU
 		// Operation selector is Opcode + Function. Easier in hardware than in software.
 		byte operationSelector = (byte)((instructionWord >> 4) & 0b00001111);
 		operationSelector = (byte)(operationSelector << 3);
-		operationSelector |= (byte)((instructionWord >> 13) & 0b00000111);
+		operationSelector |= (byte)((instructionWord >> 10) & 0b00000111);
 
 		decodedOperation.Operation = operationSelector switch
 		{
