@@ -987,7 +987,7 @@ internal partial class CPU
 				byte b = 1;
 				result = (byte)(a + b);
 
-				flagState.Carry = BitHelper.WillAdditionWrap(a, b);
+				// flagState.Carry = BitHelper.WillAdditionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillAdditionOverflow(a, b);
 				flagState.HalfCarry = BitHelper.WillAdditionHalfCarry(a, b);
 				flagState.Sign = (result & 0x80) != 0;
@@ -1001,7 +1001,7 @@ internal partial class CPU
 				ushort b = 1;
 				result = (ushort)(a + b);
 
-				flagState.Carry = BitHelper.WillAdditionWrap(a, b);
+				// flagState.Carry = BitHelper.WillAdditionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillAdditionOverflow(a, b);
 				flagState.HalfCarry = false; // Undefined
 				flagState.Sign = (result & 0x8000) != 0;
@@ -1017,7 +1017,7 @@ internal partial class CPU
 				uint b = 1;
 				result = a + b;
 
-				flagState.Carry = BitHelper.WillAdditionWrap(a, b);
+				// flagState.Carry = BitHelper.WillAdditionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillAdditionOverflow(a, b);
 				flagState.HalfCarry = false; // Undefined
 				flagState.Sign = (result & 0x80000000) != 0;
@@ -1067,7 +1067,7 @@ internal partial class CPU
 				byte b = 1;
 				result = (byte)(a - b);
 
-				flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
+				// flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillSubtractionUnderflow(a, b);
 				flagState.HalfCarry = BitHelper.WillSubtractionHalfCarry(a, b);
 				flagState.Sign = (result & 0x80) != 0;
@@ -1081,7 +1081,7 @@ internal partial class CPU
 				ushort b = 1;
 				result = (ushort)(a - b);
 
-				flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
+				// flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillSubtractionUnderflow(a, b);
 				flagState.HalfCarry = false; // Undefined
 				flagState.Sign = (result & 0x8000) != 0;
@@ -1098,7 +1098,7 @@ internal partial class CPU
 
 				result = a - b;
 
-				flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
+				// flagState.Carry = BitHelper.WillSubtractionWrap(a, b);
 				flagState.ParityOverflow = BitHelper.WillSubtractionUnderflow(a, b);
 				flagState.HalfCarry = false; // Undefined
 				flagState.Sign = (result & 0x80000000) != 0;
