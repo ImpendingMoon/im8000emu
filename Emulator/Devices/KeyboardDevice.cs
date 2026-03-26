@@ -138,7 +138,8 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 				{
 					if (pressedKey == KeyboardKey.PrintScreen)
 					{
-						Array.Reverse(scancode);
+						// Print screen is special
+						scancode = [0xE0, 0xB7, 0xE0, 0xAA];
 						AddKey(scancode);
 					}
 					else if (pressedKey != KeyboardKey.Pause)
@@ -294,7 +295,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 
 			// Misc
 			KeyboardKey.Escape => [0x01],
-			KeyboardKey.PrintScreen => [0xE0, 0x2A, 0xE0, 0x37], // Make only. Break sends reverse.
+			KeyboardKey.PrintScreen => [0xE0, 0x2A, 0xE0, 0x37], // Make only. Break sends alternate.
 			KeyboardKey.ScrollLock => [0x46],
 			KeyboardKey.Pause => [0xE1, 0x1D, 0x45, 0xE1, 0x9D, 0xC5], // No break code, long sequence
 
