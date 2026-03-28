@@ -16,13 +16,8 @@ internal class Program
 			return;
 		}
 
-		if (args.Length < 1)
-		{
-			Console.Error.WriteLine("Usage: im8000emu <ROM file>");
-			return;
-		}
-
-		string filePath = args[0].Trim('"').Trim();
+		string filePath = Config.BiosRom.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+		filePath = Path.GetFullPath(filePath);
 
 		if (!File.Exists(filePath))
 		{

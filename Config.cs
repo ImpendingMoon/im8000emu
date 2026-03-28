@@ -25,4 +25,5 @@ internal static class Config
 	public static readonly uint MemorySize = _configuration.GetValue<uint>("Emulator:MemorySize");
 	/// <summary>VRAM size in bytes. Min 4,096, max 2,097,152</summary>
 	public static readonly uint VideoMemorySize = _configuration.GetValue<uint>("Emulator:VideoMemorySize");
+	public static readonly string BiosRom = _configuration.GetValue<string>("Emulator:BiosRom");
 }
