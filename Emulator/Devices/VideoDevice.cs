@@ -161,6 +161,12 @@ internal class VideoDevice : IMemoryDevice
 			case Constants.VideoMode.Text80x25:
 				RenderText80x25Mode();
 				break;
+			case Constants.VideoMode.Graphics640x200x1bpp:
+				RenderMonochrome640x200Mode();
+				break;
+			case Constants.VideoMode.Graphics320x200x2bpp:
+				RenderMonochrome640x200Mode();
+				break;
 			default:
 				throw new NotImplementedException($"Video Mode {_mode} is unimplemented");
 		}
@@ -268,6 +274,62 @@ internal class VideoDevice : IMemoryDevice
 				2
 			);
 			Raylib.ImageDrawRectangleRec(ref _display, cursorRect, CgaPalette[7]); // light gray
+		}
+	}
+
+	private void RenderMonochrome640x200Mode()
+	{
+		const int width = 640;
+		const int height = 200;
+
+		if (_display.Width != width || _display.Height != height)
+		{
+			Raylib.UnloadImage(_display);
+			_display = Raylib.GenImageColor(width, height, Color.Black);
+		}
+
+		for (int y = 0; y < height; y++)
+		{
+			for (int i = 0; i < width / 8; i++)
+			{
+				uint address = (uint)((width / 8 * y) + i);
+				byte pixels = (byte)_vram.Read(address, Constants.DataSize.Byte);
+
+				for (int bit = 0; bit < 8; bit++)
+				{
+					bool lit = (pixels & (0x80 >> bit)) != 0;
+					int x = (i * 8) + bit;
+					Raylib.ImageDrawPixel(ref _display, x, y, lit ? CgaPalette[7] : CgaPalette[0]);
+				}
+			}
+		}
+	}
+
+	private void Render4Color320x200Mode()
+	{
+		const int width = 320;
+		const int height = 200;
+
+		if (_display.Width != width || _display.Height != height)
+		{
+			Raylib.UnloadImage(_display);
+			_display = Raylib.GenImageColor(width, height, Color.Black);
+		}
+
+		for (int y = 0; y < height; y++)
+		{
+			for (int byteIndex = 0; byteIndex < width / 4; byteIndex++)
+			{
+				uint addr = (uint)((width / 4 * y) + byteIndex);
+				byte pixels = (byte)_vram.Read(addr, Constants.DataSize.Byte);
+
+				for (int pair = 0; pair < 4; pair++)
+				{
+					int colorIndex = (pixels >> (6 - (pair * 2))) & 0x03;
+					int x = (byteIndex * 4) + pair;
+					Raylib.ImageDrawPixel(ref _display, x, y, CgaPalette[colorIndex]);
+				}
+			}
 		}
 	}
 }
