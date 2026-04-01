@@ -13,16 +13,16 @@ internal class EmulatedSystem
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
 
+	// 1980-era business micro, similar to the 5150.
 	public EmulatedSystem(byte[] romData)
 	{
 
 		var biosRom = new MemoryDevice(romData, 0x10000, true);
-		// 1980-era business micro, similar to the 5150.
 		var mainRam = new MemoryDevice(Config.MemorySize);
 
 		var memoryBus = new MemoryBus();
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
-		// BIOS extension ROMs follow in 64KB blocks until 0x1F_FFFF
+		// BIOS extension ROMs follow in 256KB blocks until 0x1F_FFFF
 		memoryBus.AttachDevice(biosRom, 0x00_0000, 0x00_FFFF);
 		// At least 16 KB RAM
 		memoryBus.AttachDevice(mainRam, 0x20_0000, 0x3F_FFFF);
@@ -31,8 +31,8 @@ internal class EmulatedSystem
 		_keyboard = new KeyboardDevice();
 
 		var ioBus = new MemoryBus();
-		ioBus.AttachDevice(_videoCard, 0x00, 0x03);
-		ioBus.AttachDevice(_keyboard, 0x04, 0x07);
+		ioBus.AttachDevice(_keyboard, 0x20, 0x3F);
+		ioBus.AttachDevice(_videoCard, 0x60, 0x7F);
 
 		// TODO:
 		// - Z80 CTC, SIO, PIO, DMA

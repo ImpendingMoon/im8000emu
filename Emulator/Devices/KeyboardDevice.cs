@@ -6,12 +6,13 @@ namespace im8000emu.Emulator.Devices;
 ///     Emulates a keyboard that matches PC-XT scancodes (set 1), but with a generic interface that will probably
 ///     be the Z80 PIO at some point.
 ///     Address map:
-///     0 - STATUS (read)
+///     0 - STATUS (read)/CONFIG (write)
+/// 	STATUS:
 ///     - b0: Data Ready
-///     1 - DATA (read)
-///     2 - CONFIG (write)
-///     - b0: Keyboard Disabled (0)/Enabled (1)
+/// 	CONFIG:
+///	- b0: Keyboard Disabled (0)/Enabled (1)
 ///     - b1: Interrupts Disabled (0)/Enabled (1)
+///     1 - DATA (read)
 /// </summary>
 internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 {
@@ -28,7 +29,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 	{
 		// Probably need to figure out how we send signals with RETI/RETN to unlatch interrupt.
 		RaisedInterrupt = false;
-		return 0x09; // Match IBM PC because why not
+		return 0x08;
 	}
 
 	public uint Size => 4;
@@ -93,7 +94,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 			}
 		}
 
-		if (offset == 2)
+		if (offset == 0)
 		{
 			_enableKeyboard = (value & 1) != 0;
 			_enableInterrupts = (value & 2) != 0;

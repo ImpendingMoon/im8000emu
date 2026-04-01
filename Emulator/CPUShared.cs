@@ -149,8 +149,8 @@ internal partial class CPU
 		// In software, easier to actually exchange the values
 		Constants.RegisterTargets alternate = Constants.RegisterToAlternate[register];
 
-		ushort primaryValue = (ushort)Registers.GetRegister(register, size);
-		ushort alternateValue = (ushort)Registers.GetRegister(alternate, size);
+		uint primaryValue = Registers.GetRegister(register, size);
+		uint alternateValue = Registers.GetRegister(alternate, size);
 
 		Registers.SetRegister(alternate, size, primaryValue);
 		Registers.SetRegister(register, size, alternateValue);

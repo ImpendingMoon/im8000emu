@@ -66,7 +66,7 @@ internal class VideoDevice : IMemoryDevice
 		_enableDisplay = false;
 		_enableCursor = false;
 		_currentFrameCycle = 0;
-		memoryBus.AttachDevice(_vram, 0xC0_0000, 0xFF_FFFF);
+		memoryBus.AttachDevice(_vram, 0xE0_0000, 0xFF_FFFF);
 	}
 
 	public uint Size => 4;
