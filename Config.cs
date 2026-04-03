@@ -17,6 +17,8 @@ internal static class Config
 	public static readonly int IOCycleCost = _configuration.GetValue<int>("Emulator:IOCycleCost");
 	/// <summary>The cost to move a DWord through the ALU</summary>
 	public static readonly int DWordALUCost = _configuration.GetValue<int>("Emulator:DWordALUCost");
+	/// <summary>Use an 8-bit memory bus instead of the default 16-bit memory bus</summary>
+	public static readonly bool UseNarrowBus = _configuration.GetValue<bool>("Emulator:UseNarrowBus");
 	/// <summary>Throw exceptions on illegal emulated system states</summary>
 	public static readonly bool EnableStrictMode = _configuration.GetValue<bool>("Emulator:EnableStrictMode");
 	/// <summary>Emulated CPU speed in Hz. Recommended 4,000,000 Hz, max is whatever your CPU can handle</summary>

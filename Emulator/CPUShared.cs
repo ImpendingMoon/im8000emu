@@ -22,13 +22,26 @@ internal partial class CPU
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
 		result.Value = activeBus.Read(address, size);
-		result.Cycles = size switch
+		if (Config.UseNarrowBus)
 		{
-			Constants.DataSize.Byte => 1,
-			Constants.DataSize.Word => aligned ? 1 : 2,
-			Constants.DataSize.DWord => aligned ? 2 : 3,
-			_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
-		};
+			result.Cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => 2,
+				Constants.DataSize.DWord => 4,
+				_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
+			};
+		}
+		else
+		{
+			result.Cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => aligned ? 1 : 2,
+				Constants.DataSize.DWord => aligned ? 2 : 3,
+				_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
+			};
+		}
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
@@ -45,13 +58,27 @@ internal partial class CPU
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
 		activeBus.Write(address, size, value);
-		result.Cycles = size switch
+		result.Value = activeBus.Read(address, size);
+		if (Config.UseNarrowBus)
 		{
-			Constants.DataSize.Byte => 1,
-			Constants.DataSize.Word => aligned ? 1 : 2,
-			Constants.DataSize.DWord => aligned ? 2 : 3,
-			_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
-		};
+			result.Cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => 2,
+				Constants.DataSize.DWord => 4,
+				_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
+			};
+		}
+		else
+		{
+			result.Cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => aligned ? 1 : 2,
+				Constants.DataSize.DWord => aligned ? 2 : 3,
+				_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
+			};
+		}
 
 		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
 
