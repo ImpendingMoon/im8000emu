@@ -47,6 +47,11 @@ internal class Program
 
 			system.RunFrame();
 
+			if (system.Paused)
+			{
+				RunDebugPrompt(system);
+			}
+
 			Texture2D texture = Raylib.LoadTextureFromImage(system.Frame);
 
 			float scaleX = Raylib.GetScreenWidth() / (float)texture.Width;
@@ -81,5 +86,39 @@ internal class Program
 		}
 
 		Raylib.CloseWindow();
+	}
+
+	/// <summary>
+	///     Stub :)
+	/// </summary>
+	/// <param name="system"></param>
+	private static void RunDebugPrompt(EmulatedSystem system)
+	{
+		Console.Error.WriteLine();
+		Console.Error.WriteLine(system.CPU.Registers.GetFullDisplayString());
+		Console.Error.WriteLine("Emulator paused. Commands: r = resume, q = quit");
+
+		while (true)
+		{
+			Console.Error.Write("> ");
+			string? input = Console.ReadLine()?.Trim().ToLowerInvariant();
+
+			switch (input)
+			{
+				case "r":
+					system.Resume();
+					return;
+
+				case "q":
+				case null: // EOF
+					Raylib.CloseWindow();
+					Environment.Exit(0);
+					return;
+
+				default:
+					Console.Error.WriteLine($"Unknown command '{input}'.");
+					break;
+			}
+		}
 	}
 }

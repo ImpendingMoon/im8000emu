@@ -53,7 +53,9 @@ internal class VideoDevice : IMemoryDevice
 	{
 		if (Config.VideoMemorySize < 4096)
 		{
-			throw new EmulatorException($"Not enough VRAM! Need at least 4096 bytes, got {Config.VideoMemorySize}.");
+			throw new EmulatorFaultException(
+				$"not enough VRAM! Need at least 4096 bytes, got {Config.VideoMemorySize}."
+			);
 		}
 		_vram = new MemoryDevice(Config.VideoMemorySize);
 		_mode = Constants.VideoMode.Text80x25;
@@ -79,7 +81,7 @@ internal class VideoDevice : IMemoryDevice
 		{
 			if (Config.EnableStrictMode)
 			{
-				throw new EmulatedMachineException($"Cannot access video registers with {size} size!");
+				throw new DeviceException(offset, size, false, $"cannot access video registers with {size} size");
 			}
 
 			if (size == Constants.DataSize.Word)
@@ -116,7 +118,7 @@ internal class VideoDevice : IMemoryDevice
 		{
 			if (Config.EnableStrictMode)
 			{
-				throw new EmulatedMachineException($"Cannot access video registers with {size} size!");
+				throw new DeviceException(offset, size, true, $"cannot access video registers with {size} size");
 			}
 
 			if (size == Constants.DataSize.Word)
@@ -165,7 +167,7 @@ internal class VideoDevice : IMemoryDevice
 				RenderMonochrome640x200Mode();
 				break;
 			case Constants.VideoMode.Graphics320x200x2bpp:
-				RenderMonochrome640x200Mode();
+				Render4Color320x200Mode();
 				break;
 			default:
 				throw new NotImplementedException($"Video Mode {_mode} is unimplemented");
@@ -186,7 +188,7 @@ internal class VideoDevice : IMemoryDevice
 		{
 			if (Config.EnableStrictMode)
 			{
-				throw new EmulatedMachineException($"{value} is not a valid video mode");
+				throw new DeviceException(0, Constants.DataSize.Byte, true, $"0x{value:X2} is not a valid video mode");
 			}
 
 			_mode = default;
@@ -198,8 +200,11 @@ internal class VideoDevice : IMemoryDevice
 			if (Config.EnableStrictMode && _mode != Constants.VideoMode.Text80x25 && _vram.Size < 16384)
 			{
 				_mode = Constants.VideoMode.Text80x25;
-				throw new EmulatedMachineException(
-					$"Not enough VRAM to enable graphics mode! Need at least 16384 bytes, have {_vram.Size}"
+				throw new DeviceException(
+					0,
+					Constants.DataSize.Byte,
+					true,
+					$"not enough VRAM to eanble graphics mode: need at least 16384 bytes, have {_vram.Size}"
 				);
 			}
 		}
@@ -290,9 +295,9 @@ internal class VideoDevice : IMemoryDevice
 
 		for (int y = 0; y < height; y++)
 		{
-			for (int i = 0; i < width / 8; i++)
+			for (int i = 0; i < (width / 8); i++)
 			{
-				uint address = (uint)((width / 8 * y) + i);
+				uint address = (uint)(((width / 8) * y) + i);
 				byte pixels = (byte)_vram.Read(address, Constants.DataSize.Byte);
 
 				for (int bit = 0; bit < 8; bit++)
@@ -318,9 +323,9 @@ internal class VideoDevice : IMemoryDevice
 
 		for (int y = 0; y < height; y++)
 		{
-			for (int byteIndex = 0; byteIndex < width / 4; byteIndex++)
+			for (int byteIndex = 0; byteIndex < (width / 4); byteIndex++)
 			{
-				uint addr = (uint)((width / 4 * y) + byteIndex);
+				uint addr = (uint)(((width / 4) * y) + byteIndex);
 				byte pixels = (byte)_vram.Read(addr, Constants.DataSize.Byte);
 
 				for (int pair = 0; pair < 4; pair++)

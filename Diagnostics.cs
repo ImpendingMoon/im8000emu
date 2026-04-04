@@ -3,71 +3,72 @@ using im8000emu.Emulator;
 namespace im8000emu;
 
 /// <summary>
-///     Issues with the emulator itself
+///     A bug in the emulator itself
 /// </summary>
-internal class EmulatorException : Exception
+internal class EmulatorFaultException : Exception
 {
-	public EmulatorException(string message) : base(message)
+	public EmulatorFaultException(string message) : base(message)
 	{
 	}
 
-	public EmulatorException(string message, Exception inner) : base(message, inner)
+	public EmulatorFaultException(string message, Exception inner) : base(message, inner)
 	{
 	}
 }
 
 /// <summary>
-///     Issues with software in the emulated machine
+///     Snapshot of the CPU state
 /// </summary>
-internal class EmulatedMachineException : Exception
+internal readonly struct CpuContext
 {
-	public EmulatedMachineException(string message) : base(message)
-	{
-	}
+	public uint PC { get; init; }
+	public string RegisterDump { get; init; }
+	public string FlagDump { get; init; }
 
-	public EmulatedMachineException(string message, Exception inner) : base(message, inner)
+	public override string ToString()
 	{
+		return $"PC=0x{PC:X8}\n  {RegisterDump}\n  {FlagDump}";
 	}
 }
 
-internal class InvalidExecutorOperandException : EmulatorException
+/// <summary>
+///     Base class for faults inside the emulated machine, not in the emulator itself
+/// </summary>
+internal abstract class CpuException : Exception
 {
-	public InvalidExecutorOperandException(string message) : base($"Invalid executor operand: {message}")
+	protected CpuException(string message, CpuContext context) : base($"{message}\n  {context}")
 	{
+		Context = context;
 	}
+
+	public CpuContext Context { get; }
 }
 
-internal class DecodeException : EmulatedMachineException
+internal class IllegalInstructionException : CpuException
 {
-	public DecodeException(uint pc, string reason) : base($"Decode failure at 0x{pc:X}: {reason}")
-	{
-
-	}
-
-	public DecodeException(uint pc, uint instructionWord, string reason) : base(
-		$"Decode failure at PC=0x{pc:X}: [0x{instructionWord:X}] {reason}"
+	public IllegalInstructionException(uint pc, ushort instructionWord, string reason, CpuContext context) : base(
+		$"Illegal instruction at PC=0x{pc:X8} [0x{instructionWord:X4}]: {reason}",
+		context
 	)
 	{
-		PC = pc;
 		InstructionWord = instructionWord;
 	}
 
-	public uint InstructionWord { get; }
-	public uint PC { get; }
-}
-
-internal class InvalidSizeException : DecodeException
-{
-	public InvalidSizeException(uint pc, string message) : base(pc, message)
-	{
-	}
-}
-
-internal class MemoryAccessException : EmulatedMachineException
-{
-	public MemoryAccessException(uint address, Constants.DataSize size, bool isWrite) : base(
-		$"{(isWrite ? "Write" : "Read")} of size {size} at invalid address 0x{address:X}"
+	public IllegalInstructionException(uint pc, string reason, CpuContext context) : base(
+		$"Illegal instruction at PC=0x{pc:X8}: {reason}",
+		context
 	)
+	{
+		InstructionWord = null;
+	}
+
+	public ushort? InstructionWord { get; }
+}
+
+internal class MemoryFaultException : CpuException
+{
+	public MemoryFaultException(uint address, Constants.DataSize size, bool isWrite, string reason, CpuContext context)
+		: base($"Memory fault: {(isWrite ? "write" : "read")} of {size} at 0x{address:X8}: {reason}", context)
 	{
 		Address = address;
 		Size = size;
@@ -77,18 +78,29 @@ internal class MemoryAccessException : EmulatedMachineException
 	public uint Address { get; }
 	public Constants.DataSize Size { get; }
 	public bool IsWrite { get; }
+}
 
-	internal class ReadOnlyViolationException : EmulatedMachineException
+public sealed class DeviceException : Exception
+{
+	public DeviceException(uint offset, Constants.DataSize size, bool isWrite, string reason) : base(
+		$"{(isWrite ? "write" : "read")} of {size} at device offset 0x{offset:X}: {reason}"
+	)
 	{
-		public ReadOnlyViolationException(uint address) : base($"Attempted write to read-only address 0x{address:X}")
-		{
-		}
+		Offset = offset;
+		Size = size;
+		IsWrite = isWrite;
+		Reason = reason;
 	}
 
-	internal class WriteOnlyViolationException : EmulatedMachineException
+	public uint Offset { get; }
+	public Constants.DataSize Size { get; }
+	public bool IsWrite { get; }
+	public string Reason { get; }
+}
+
+internal class ExecutionFaultException : CpuException
+{
+	public ExecutionFaultException(string reason, CpuContext context) : base($"Execution fault: {reason}", context)
 	{
-		public WriteOnlyViolationException(uint address) : base($"Attempted read from write-only address 0x{address:X}")
-		{
-		}
 	}
 }

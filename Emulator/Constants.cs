@@ -1,6 +1,6 @@
 ﻿namespace im8000emu.Emulator;
 
-internal static class Constants
+public static class Constants
 {
 	public enum Condition
 	{

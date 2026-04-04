@@ -7,8 +7,8 @@ namespace im8000emu;
 internal class EmulatedSystem
 {
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Constants.TargetFramerate;
-	private readonly VideoDevice _videoCard;
 	private readonly KeyboardDevice _keyboard;
+	private readonly VideoDevice _videoCard;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
@@ -16,7 +16,6 @@ internal class EmulatedSystem
 	// 1980-era business micro, similar to the 5150.
 	public EmulatedSystem(byte[] romData)
 	{
-
 		var biosRom = new MemoryDevice(romData, 0x10000, true);
 		var mainRam = new MemoryDevice(Config.MemorySize);
 
@@ -24,7 +23,6 @@ internal class EmulatedSystem
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
 		// BIOS extension ROMs follow in 256KB blocks until 0x1F_FFFF
 		memoryBus.AttachDevice(biosRom, 0x00_0000, 0x00_FFFF);
-		// At least 16 KB RAM
 		memoryBus.AttachDevice(mainRam, 0x20_0000, 0x3F_FFFF);
 
 		_videoCard = new VideoDevice(memoryBus);
@@ -46,12 +44,26 @@ internal class EmulatedSystem
 	}
 
 	public Image Frame => _videoCard.GetFrame();
-
 	public CPU CPU { get; }
+
+	public bool Paused { get; private set; }
+
+	/// <summary>The exception that caused the most recent pause</summary>
+	public CpuException? MostRecentException { get; private set; }
+
+	public void Resume()
+	{
+		MostRecentException = null;
+		Paused = false;
+	}
 
 	public void RunFrame()
 	{
-		// Read new keys
+		if (Paused)
+		{
+			return;
+		}
+
 		_keyboard.Refresh();
 
 		int budget = _cyclesPerFrame + _cycleRemainder;
@@ -65,18 +77,14 @@ internal class EmulatedSystem
 				DecodedOperation operation = CPU.Decode();
 				cycles = CPU.Execute(operation);
 			}
-			catch (EmulatedMachineException ex)
+			catch (CpuException ex)
 			{
-				Console.Error.WriteLine($"Exception during execution: {ex.Message}");
+				Paused = true;
+				MostRecentException = ex;
 
-				// No real behavior to emulate. No good way to recover from this.
-				// Invalid instructions are a hard crash.
-				if (ex is DecodeException)
-				{
-					throw;
-				}
-
-				cycles = 4;
+				Console.Error.WriteLine();
+				Console.Error.WriteLine(ex.Message);
+				return;
 			}
 
 			budget -= cycles;

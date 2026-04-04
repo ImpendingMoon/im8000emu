@@ -7,10 +7,10 @@ namespace im8000emu.Emulator.Devices;
 ///     be the Z80 PIO at some point.
 ///     Address map:
 ///     0 - STATUS (read)/CONFIG (write)
-/// 	STATUS:
+///     STATUS:
 ///     - b0: Data Ready
-/// 	CONFIG:
-///	- b0: Keyboard Disabled (0)/Enabled (1)
+///     CONFIG:
+///     - b0: Keyboard Disabled (0)/Enabled (1)
 ///     - b1: Interrupts Disabled (0)/Enabled (1)
 ///     1 - DATA (read)
 /// </summary>
@@ -19,8 +19,8 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 	private const int MaxBufferCapacity = 32;
 	private readonly Queue<byte> _buffer = [];
 	private readonly HashSet<KeyboardKey> _currentlyPressedKeys = [];
-	private bool _enableInterrupts = false;
-	private bool _enableKeyboard = false;
+	private bool _enableInterrupts;
+	private bool _enableKeyboard;
 
 	public bool RaisedInterrupt { get; private set; }
 	public bool RaisedNonMaskableInterrupt => false;
@@ -42,7 +42,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 		{
 			if (Config.EnableStrictMode)
 			{
-				throw new EmulatedMachineException($"Cannot access keyboard with {size} size!");
+				throw new DeviceException(offset, size, false, $"cannot access keyboard with {size} size");
 			}
 
 			if (size == Constants.DataSize.Word)
@@ -77,7 +77,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 		{
 			if (Config.EnableStrictMode)
 			{
-				throw new EmulatedMachineException($"Cannot access keyboard with {size} size!");
+				throw new DeviceException(offset, size, true, $"cannot access keyboard with {size} size");
 			}
 
 			if (size == Constants.DataSize.Word)
@@ -101,7 +101,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 		}
 		else if (Config.EnableStrictMode)
 		{
-			throw new EmulatedMachineException($"Cannot write to keyboard at {offset}!");
+			throw new DeviceException(offset, size, true, "keyboard register is read-only");
 		}
 	}
 

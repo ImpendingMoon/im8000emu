@@ -19,13 +19,20 @@ internal class MemoryBus
 			if (mapping.ContainsAddress(address))
 			{
 				uint offset = address - mapping.StartAddress;
-				return mapping.Device.Read(offset, size);
+				try
+				{
+					return mapping.Device.Read(offset, size);
+				}
+				catch (DeviceException ex)
+				{
+					throw new MemoryBusException(address, ex.Size, ex.IsWrite, ex.Reason);
+				}
 			}
 		}
 
 		if (Config.EnableStrictMode)
 		{
-			throw new MemoryAccessException(address, size, false);
+			throw new MemoryBusException(address, size, false, "unmapped address");
 		}
 
 		return 0xFFFF_FFFF;
@@ -38,15 +45,43 @@ internal class MemoryBus
 			if (mapping.ContainsAddress(address))
 			{
 				uint offset = address - mapping.StartAddress;
-				mapping.Device.Write(offset, size, value);
+				try
+				{
+					mapping.Device.Write(offset, size, value);
+				}
+				catch (DeviceException ex)
+				{
+					throw new MemoryBusException(address, ex.Size, ex.IsWrite, ex.Reason);
+				}
 				return;
 			}
 		}
 
 		if (Config.EnableStrictMode)
 		{
-			throw new MemoryAccessException(address, size, true);
+			throw new MemoryBusException(address, size, true, "unmapped address");
 		}
+	}
+
+	/// <summary>
+	///     Thrown in here where we don't have CPU context
+	/// </summary>
+	internal sealed class MemoryBusException : Exception
+	{
+		public MemoryBusException(uint address, Constants.DataSize size, bool isWrite, string reason) : base(
+			$"{(isWrite ? "write" : "read")} of {size} at 0x{address:X8}: {reason}"
+		)
+		{
+			Address = address;
+			Size = size;
+			IsWrite = isWrite;
+			Reason = reason;
+		}
+
+		public uint Address { get; }
+		public Constants.DataSize Size { get; }
+		public bool IsWrite { get; }
+		public string Reason { get; }
 	}
 
 	private readonly struct Mapping

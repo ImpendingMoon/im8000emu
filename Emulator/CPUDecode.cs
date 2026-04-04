@@ -90,10 +90,11 @@ internal partial class CPU
 					default:
 					{
 						// Other groups are reserved for expansion.
-						throw new DecodeException(
+						throw new IllegalInstructionException(
 							_currentOperation.BaseAddress,
 							instructionWord,
-							"Invalid special instruction subgroup."
+							"Invalid special instruction subgroup.",
+							CaptureContext()
 						);
 					}
 				}
@@ -147,10 +148,11 @@ internal partial class CPU
 			0b010010 => Constants.Operation.SLA,
 			0b010011 => Constants.Operation.SRA,
 			0b010100 => Constants.Operation.SRL,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B6} is not a valid R-Type operation selector"
+				$"0b{operationSelector:B6} is not a valid R-Type operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -163,10 +165,11 @@ internal partial class CPU
 
 		if (operand1Selector == 0b111)
 		{
-			throw new DecodeException(
+			throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				"0b111 is not a valid destination target"
+				"0b111 is not a valid destination target",
+				CaptureContext()
 			);
 		}
 		decodedOperation.Operand1 = new Operand
@@ -231,10 +234,11 @@ internal partial class CPU
 			0b10011 => Constants.Operation.SRA,
 			0b10100 => Constants.Operation.SRL,
 			0b10101 => Constants.Operation.IN_OUT,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B6} is not a valid RM-Type operation selector"
+				$"0b{operationSelector:B6} is not a valid RM-Type operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -280,18 +284,20 @@ internal partial class CPU
 		{
 			if (isLoad)
 			{
-				throw new DecodeException(
+				throw new IllegalInstructionException(
 					_currentOperation.BaseAddress,
 					instructionWord,
-					"0b111 is not a valid destination target for memory-to-register operations"
+					"0b111 is not a valid destination target for memory-to-register operations",
+					CaptureContext()
 				);
 			}
 			if (indirectOperandSelector == 0b111)
 			{
-				throw new DecodeException(
+				throw new IllegalInstructionException(
 					_currentOperation.BaseAddress,
 					instructionWord,
-					"0b111 is not a valid source target with direct addressing"
+					"0b111 is not a valid source target with direct addressing",
+					CaptureContext()
 				);
 			}
 
@@ -349,10 +355,11 @@ internal partial class CPU
 			0b0001001 => Constants.Operation.DIV,
 			0b0001010 => Constants.Operation.SDIV,
 			0b0001011 => Constants.Operation.CPL,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B7} is not a valid UR-Type operation selector"
+				$"0b{operationSelector:B7} is not a valid UR-Type operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -365,10 +372,11 @@ internal partial class CPU
 
 		if (operand1Selector == 0b111)
 		{
-			throw new DecodeException(
+			throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				"0b111 is not a valid target selector for UR-type instructions"
+				"0b111 is not a valid target selector for UR-type instructions",
+				CaptureContext()
 			);
 		}
 		decodedOperation.Operand1 = new Operand
@@ -406,10 +414,11 @@ internal partial class CPU
 			0b0001001 => Constants.Operation.DIV,
 			0b0001010 => Constants.Operation.SDIV,
 			0b0001011 => Constants.Operation.CPL,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B7} is not a valid UM-Type operation selector"
+				$"0b{operationSelector:B7} is not a valid UM-Type operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -466,10 +475,11 @@ internal partial class CPU
 			0b01000 => Constants.Operation.RET,
 			0b01001 => Constants.Operation.RETI,
 			0b01010 => Constants.Operation.RETN,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B5} is not a valid B-Type operation selector"
+				$"0b{operationSelector:B5} is not a valid B-Type operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -527,10 +537,11 @@ internal partial class CPU
 				{
 					0b00000000 => Constants.Operation.EXX,
 					0b00000001 => Constants.Operation.EXI,
-					_ => throw new DecodeException(
+					_ => throw new IllegalInstructionException(
 						_currentOperation.BaseAddress,
 						instructionWord,
-						$"0b{functionSelector:B8} is not a valid Exchange function selector"
+						$"0b{functionSelector:B8} is not a valid Exchange function selector",
+						CaptureContext()
 					),
 				};
 				break;
@@ -543,10 +554,11 @@ internal partial class CPU
 					0b00000000 => Constants.Operation.RST,
 					0b00000001 => Constants.Operation.SCF,
 					0b00000010 => Constants.Operation.CCF,
-					_ => throw new DecodeException(
+					_ => throw new IllegalInstructionException(
 						_currentOperation.BaseAddress,
 						instructionWord,
-						$"0b{functionSelector:B8} is not a valid Control Flow function selector"
+						$"0b{functionSelector:B8} is not a valid Control Flow function selector",
+						CaptureContext()
 					),
 				};
 
@@ -569,10 +581,11 @@ internal partial class CPU
 					0b00000000 => Constants.Operation.DAA,
 					0b00000001 => Constants.Operation.RLD,
 					0b00000010 => Constants.Operation.RRD,
-					_ => throw new DecodeException(
+					_ => throw new IllegalInstructionException(
 						_currentOperation.BaseAddress,
 						instructionWord,
-						$"0b{functionSelector:B8} is not a valid BCD function selector"
+						$"0b{functionSelector:B8} is not a valid BCD function selector",
+						CaptureContext()
 					),
 				};
 				break;
@@ -590,10 +603,11 @@ internal partial class CPU
 					0b00000101 => Constants.Operation.LD_I_NN,
 					0b00000110 => Constants.Operation.LD_R_A,
 					0b00000111 => Constants.Operation.LD_A_R,
-					_ => throw new DecodeException(
+					_ => throw new IllegalInstructionException(
 						_currentOperation.BaseAddress,
 						instructionWord,
-						$"0b{functionSelector:B8} is not a valid System function selector"
+						$"0b{functionSelector:B8} is not a valid System function selector",
+						CaptureContext()
 					),
 				};
 
@@ -610,10 +624,11 @@ internal partial class CPU
 			}
 			default:
 			{
-				throw new DecodeException(
+				throw new IllegalInstructionException(
 					_currentOperation.BaseAddress,
 					instructionWord,
-					$"0b{operationSelector:B4} is not a valid N-Type operation selector"
+					$"0b{operationSelector:B4} is not a valid N-Type operation selector",
+					CaptureContext()
 				);
 			}
 		}
@@ -797,10 +812,11 @@ internal partial class CPU
 				decodedOperation.DataSize = Constants.DataSize.Word;
 				break;
 			default:
-				throw new DecodeException(
+				throw new IllegalInstructionException(
 					_currentOperation.BaseAddress,
 					instructionWord,
-					$"0b{instructionWord:B16} is not a valid Block operation selector"
+					$"0b{instructionWord:B16} is not a valid Block operation selector",
+					CaptureContext()
 				);
 		}
 	}
@@ -825,10 +841,11 @@ internal partial class CPU
 			0b0001 => Constants.Operation.DJNZ,
 			0b0010 => Constants.Operation.JANZ,
 			0b0011 => Constants.Operation.JAZ,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{operationSelector:B4} is not a valid single-byte operation selector"
+				$"0b{operationSelector:B4} is not a valid single-byte operation selector",
+				CaptureContext()
 			),
 		};
 
@@ -856,10 +873,11 @@ internal partial class CPU
 			0b00 => Constants.DataSize.Byte,
 			0b01 => Constants.DataSize.Word,
 			0b10 => Constants.DataSize.DWord,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{selector:B} is not a valid operand size selector"
+				$"0b{selector:B} is not a valid operand size selector",
+				CaptureContext()
 			),
 		};
 	}
@@ -881,10 +899,11 @@ internal partial class CPU
 				0b100 => Constants.RegisterTargets.E,
 				0b101 => Constants.RegisterTargets.H,
 				0b110 => Constants.RegisterTargets.L,
-				_ => throw new DecodeException(
+				_ => throw new IllegalInstructionException(
 					_currentOperation.BaseAddress,
 					instructionWord,
-					$"0b{selector:B} is not a valid register selector"
+					$"0b{selector:B} is not a valid register selector",
+					CaptureContext()
 				),
 			};
 		}
@@ -898,10 +917,11 @@ internal partial class CPU
 			0b100 => Constants.RegisterTargets.IX,
 			0b101 => Constants.RegisterTargets.IY,
 			0b110 => Constants.RegisterTargets.SP,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"{selector} is not a valid register selector"
+				$"{selector} is not a valid register selector",
+				CaptureContext()
 			),
 		};
 	}
@@ -919,10 +939,11 @@ internal partial class CPU
 			0b0110 => Constants.Condition.P,
 			0b0111 => Constants.Condition.N,
 			0b1111 => Constants.Condition.Unconditional,
-			_ => throw new DecodeException(
+			_ => throw new IllegalInstructionException(
 				_currentOperation.BaseAddress,
 				instructionWord,
-				$"0b{selector:B4} is not a valid condition selector"
+				$"0b{selector:B4} is not a valid condition selector",
+				CaptureContext()
 			),
 		};
 	}

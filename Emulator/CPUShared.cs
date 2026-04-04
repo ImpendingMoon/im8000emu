@@ -7,44 +7,37 @@ internal partial class CPU
 	private readonly MemoryBus _ioBus;
 	private readonly MemoryBus _memoryBus;
 
-	// Reusable decode object. Avoids a heap allocation on every fetch.
 	private DecodedOperation _currentOperation;
 	private int _interruptMode = 1;
 	private bool _isHalted;
 	private bool _shouldEnableInterrupts;
 
+	private CpuContext CaptureContext()
+	{
+		return new CpuContext
+		{
+			PC = Registers.GetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord),
+			RegisterDump = Registers.GetStandardDisplayString(),
+			FlagDump = Registers.GetFlagsDisplayString(),
+		};
+	}
+
 	private MemoryResult ReadMemory(uint address, Constants.DataSize size, bool useIO = false)
 	{
 		MemoryResult result;
-
 		bool aligned = (address & 1) == 0;
-
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
-		result.Value = activeBus.Read(address, size);
-		if (Config.UseNarrowBus)
+		try
 		{
-			result.Cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => 2,
-				Constants.DataSize.DWord => 4,
-				_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
-			};
+			result.Value = activeBus.Read(address, size);
 		}
-		else
+		catch (MemoryBus.MemoryBusException ex)
 		{
-			result.Cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => aligned ? 1 : 2,
-				Constants.DataSize.DWord => aligned ? 2 : 3,
-				_ => throw new EmulatorException($"ReadMemory is not implemented for DataSize {size}"),
-			};
+			throw new MemoryFaultException(ex.Address, ex.Size, ex.IsWrite, ex.Reason, CaptureContext());
 		}
 
-		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
-
+		result.Cycles = BusCycles(size, aligned, useIO);
 		return result;
 	}
 
@@ -52,44 +45,56 @@ internal partial class CPU
 	{
 		MemoryResult result;
 		result.Value = 0;
-
 		bool aligned = (address & 1) == 0;
-
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
-		activeBus.Write(address, size, value);
-		result.Value = activeBus.Read(address, size);
+		try
+		{
+			activeBus.Write(address, size, value);
+			result.Value = activeBus.Read(address, size);
+		}
+		catch (MemoryBus.MemoryBusException ex)
+		{
+			throw new MemoryFaultException(ex.Address, ex.Size, ex.IsWrite, ex.Reason, CaptureContext());
+		}
+
+		result.Cycles = BusCycles(size, aligned, useIO);
+		return result;
+	}
+
+	private int BusCycles(Constants.DataSize size, bool aligned, bool useIO)
+	{
+		int cycles;
+
 		if (Config.UseNarrowBus)
 		{
-			result.Cycles = size switch
+			cycles = size switch
 			{
 				Constants.DataSize.Byte => 1,
 				Constants.DataSize.Word => 2,
 				Constants.DataSize.DWord => 4,
-				_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
 			};
 		}
 		else
 		{
-			result.Cycles = size switch
+			cycles = size switch
 			{
 				Constants.DataSize.Byte => 1,
 				Constants.DataSize.Word => aligned ? 1 : 2,
 				Constants.DataSize.DWord => aligned ? 2 : 3,
-				_ => throw new EmulatorException($"WriteMemory is not implemented for DataSize {size}"),
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
 			};
 		}
 
-		result.Cycles *= useIO ? Config.IOCycleCost : Config.BusCycleCost;
-
-		return result;
+		return cycles * (useIO ? Config.IOCycleCost : Config.BusCycleCost);
 	}
 
 	private MemoryResult GetOperandValue(in Operand operand, Constants.DataSize size)
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
-			throw new ArgumentException("Either Target or Immediate must have a value");
+			throw new EmulatorFaultException("GetOperandValue: either Target or Immediate must have a value");
 		}
 
 		MemoryResult result;
@@ -120,7 +125,7 @@ internal partial class CPU
 	{
 		if (operand.Target is null && operand.Immediate is null)
 		{
-			throw new ArgumentException("Either Target or Immediate must have a value");
+			throw new EmulatorFaultException("WritebackOperand: either Target or Immediate must have a value");
 		}
 
 		MemoryResult result;
@@ -134,7 +139,7 @@ internal partial class CPU
 		{
 			if (operand.Target is null)
 			{
-				throw new ArgumentException("Cannot writeback to an immediate operand");
+				throw new EmulatorFaultException("WritebackOperand: cannot writeback to an immediate operand");
 			}
 
 			Registers.SetRegister(operand.Target.Value, size, value);
@@ -159,7 +164,7 @@ internal partial class CPU
 		}
 		else
 		{
-			throw new ArgumentException("Either Target or Immediate must have a value");
+			throw new EmulatorFaultException("GetEffectiveAddress: either Target or Immediate must have a value");
 		}
 
 		if (operand.Displacement is not null)
@@ -172,8 +177,6 @@ internal partial class CPU
 
 	private void ExchangeWithAlternate(Constants.RegisterTargets register, Constants.DataSize size)
 	{
-		// In hardware, this would just be a mux bit flip
-		// In software, easier to actually exchange the values
 		Constants.RegisterTargets alternate = Constants.RegisterToAlternate[register];
 
 		uint primaryValue = Registers.GetRegister(register, size);
@@ -195,7 +198,11 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new InvalidSizeException(decodedOperation.BaseAddress, $"{size} is not a valid operand size"),
+			_ => throw new IllegalInstructionException(
+				decodedOperation.BaseAddress,
+				$"FetchImmediate: {size} is not a valid immediate size",
+				CaptureContext()
+			),
 		};
 		return immediateFetch.Value;
 	}
@@ -213,7 +220,7 @@ internal partial class CPU
 			Constants.Condition.P => !Registers.GetFlag(Constants.FlagMasks.Sign),
 			Constants.Condition.N => Registers.GetFlag(Constants.FlagMasks.Sign),
 			Constants.Condition.Unconditional => true,
-			_ => throw new EmulatorException($"IsConditionTrue is not implemented for condition {condition}"),
+			_ => throw new EmulatorFaultException($"IsConditionTrue: not implemented for condition {condition}"),
 		};
 	}
 
