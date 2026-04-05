@@ -17,8 +17,15 @@ namespace im8000emu.Emulator.Devices;
 internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 {
 	private const int MaxBufferCapacity = 32;
+	private const float RepeatDelaySeconds = 0.5f;
+	private const float RepeatRateSeconds = 1f / 30f;
+	private static readonly int RepeatDelayFrames = (int)(RepeatDelaySeconds * Constants.TargetFramerate);
+	private static readonly int RepeatRateFrames = (int)Math.Max(
+		1,
+		MathF.Round(RepeatRateSeconds * Constants.TargetFramerate)
+	);
 	private readonly Queue<byte> _buffer = [];
-	private readonly HashSet<KeyboardKey> _currentlyPressedKeys = [];
+	private readonly Dictionary<KeyboardKey, int> _currentlyPressedKeys = [];
 	private bool _enableInterrupts;
 	private bool _enableKeyboard;
 
@@ -29,7 +36,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 	{
 		// Probably need to figure out how we send signals with RETI/RETN to unlatch interrupt.
 		RaisedInterrupt = false;
-		return 0x08;
+		return 0x18;
 	}
 
 	public uint Size => 4;
@@ -105,7 +112,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 		}
 	}
 
-	// Called every frame. Could be ISteppingDevice, but don't need to be cycle accurate.
+	// Called every frame. Could be ISteppingDevice, but doesn't need to be cycle-accurate.
 	public void Refresh()
 	{
 		if (!_enableKeyboard)
@@ -117,7 +124,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 
 		while (key != KeyboardKey.Null)
 		{
-			_currentlyPressedKeys.Add(key);
+			_currentlyPressedKeys[key] = 0;
 			byte[] scancode = KeyToScancode(key);
 			if (scancode.Length > 0)
 			{
@@ -129,7 +136,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 
 		List<KeyboardKey> keysToRemove = [];
 
-		foreach (KeyboardKey pressedKey in _currentlyPressedKeys)
+		foreach ((KeyboardKey pressedKey, int heldFrames) in _currentlyPressedKeys)
 		{
 			if (Raylib.IsKeyReleased(pressedKey))
 			{
@@ -139,9 +146,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 				{
 					if (pressedKey == KeyboardKey.PrintScreen)
 					{
-						// Print screen is special
-						scancode = [0xE0, 0xB7, 0xE0, 0xAA];
-						AddKey(scancode);
+						AddKey([0xE0, 0xB7, 0xE0, 0xAA]);
 					}
 					else if (pressedKey != KeyboardKey.Pause)
 					{
@@ -149,6 +154,30 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 						AddKey(scancode);
 					}
 				}
+				continue;
+			}
+
+			int newHeldFrames = heldFrames + 1;
+			_currentlyPressedKeys[pressedKey] = newHeldFrames;
+
+			// Pause has no break code and does not repeat
+			if (pressedKey == KeyboardKey.Pause)
+			{
+				continue;
+			}
+
+			byte[] repeatScancode = KeyToScancode(pressedKey);
+			if (repeatScancode.Length == 0)
+			{
+				continue;
+			}
+
+			if (newHeldFrames == RepeatDelayFrames
+				|| (newHeldFrames > RepeatDelayFrames
+				&& (newHeldFrames - RepeatDelayFrames) % RepeatRateFrames == 0)
+			)
+			{
+				AddKey(repeatScancode);
 			}
 		}
 
