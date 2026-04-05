@@ -18,6 +18,7 @@ internal partial class CPU
 
 		if (_interruptMode == 1)
 		{
+			_interruptBus.Acknowledge(false);
 			return Internal_ServiceInterrupt(1);
 		}
 
