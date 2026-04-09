@@ -63,6 +63,48 @@ internal partial class CPU
 		return cycles;
 	}
 
+	// Load Effective Address
+	private int Execute_LEA(in DecodedOperation operation)
+	{
+		if (operation.Operand1 is null || operation.Operand2 is null)
+		{
+			throw new EmulatorFaultException("LEA requires two operands");
+		}
+
+		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
+
+		MemoryResult operandRead1 = GetOperandValue(operation.Operand1!.Value, Constants.DataSize.DWord);
+		cycles += operandRead1.Cycles;
+
+		MemoryResult operandRead2 = GetOperandValue(operation.Operand2!.Value, Constants.DataSize.Word);
+		cycles += operandRead2.Cycles;
+
+		uint scaledIndex = BitHelper.SignExtend(operandRead2.Value, 16);
+		cycles += Config.DWordALUCost;
+
+		scaledIndex = operation.DataSize switch
+		{
+			Constants.DataSize.Byte => scaledIndex << 0,
+			Constants.DataSize.Word => scaledIndex << 1,
+			Constants.DataSize.DWord => scaledIndex << 2,
+			Constants.DataSize.QWord => scaledIndex << 3,
+			_ => throw new EmulatorFaultException("Invalid size in Execute_LEA"),
+		};
+		cycles += Config.DWordALUCost;
+
+		uint effectiveAddress = operandRead1.Value + scaledIndex;
+		cycles += Config.DWordALUCost;
+
+		MemoryResult operandWrite = WritebackOperand(
+			operation.Operand1!.Value,
+			Constants.DataSize.DWord,
+			effectiveAddress
+		);
+		cycles += operandWrite.Cycles;
+
+		return cycles;
+	}
+
 	// Exchange
 	private int Execute_EX(in DecodedOperation operation)
 	{

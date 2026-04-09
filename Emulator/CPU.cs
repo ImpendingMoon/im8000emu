@@ -18,6 +18,7 @@ internal partial class CPU
 		_operationExecutors[(int)Constants.Operation.NonMaskableInterrupt] = Execute_NonMaskableInterrupt;
 		_operationExecutors[(int)Constants.Operation.HaltState] = Execute_HaltState;
 		_operationExecutors[(int)Constants.Operation.LD] = Execute_LD;
+		_operationExecutors[(int)Constants.Operation.LEA] = Execute_LEA;
 		_operationExecutors[(int)Constants.Operation.EX] = Execute_EX;
 		_operationExecutors[(int)Constants.Operation.EX_Alt] = Execute_EX_Alt;
 		_operationExecutors[(int)Constants.Operation.EXX] = Execute_EXX;

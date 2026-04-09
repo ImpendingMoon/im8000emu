@@ -20,6 +20,7 @@ public static class Constants
 		Byte,
 		Word,
 		DWord,
+		QWord,
 	}
 
 	public enum FlagMasks : ushort
@@ -45,6 +46,7 @@ public static class Constants
 
 		// Load and store
 		LD, // Load
+		LEA, // Load Effective Address
 		EX, // Exchange
 		EX_Alt, // Exchange with Alternate
 		EXX, // Exchange Primary
