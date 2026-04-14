@@ -71,12 +71,50 @@ internal partial class CPU
 			throw new EmulatorFaultException("LEA requires two operands");
 		}
 
+		Operand fixedOperand1 = operation.Operand1!.Value;
+
+		// Only instruction that messes with Size, register operands are decoded wrong.
+		// We could possibly store the actual selector bits from the instruction word
+		// and decode registers from scratch instead of doing a fixup.
+		// In theory the control unit escapes to microcode and the micro-routine handles fetch/writeback.
+		if (operation.Operand1!.Value.Target.HasValue && !operation.Operand1!.Value.Indirect)
+		{
+			fixedOperand1.Target = operation.Operand1!.Value.Target!.Value switch
+			{
+				Constants.RegisterTargets.A => Constants.RegisterTargets.AF,
+				Constants.RegisterTargets.B => Constants.RegisterTargets.BC,
+				Constants.RegisterTargets.C => Constants.RegisterTargets.DE,
+				Constants.RegisterTargets.D => Constants.RegisterTargets.HL,
+				Constants.RegisterTargets.E => Constants.RegisterTargets.IX,
+				Constants.RegisterTargets.H => Constants.RegisterTargets.IY,
+				Constants.RegisterTargets.L => Constants.RegisterTargets.SP,
+				_ => operation.Operand1!.Value.Target!.Value,
+			};
+		}
+
+		Operand fixedOperand2 = operation.Operand2!.Value;
+
+		if (operation.Operand2.Value.Target.HasValue && !operation.Operand2!.Value.Indirect)
+		{
+			fixedOperand2.Target = operation.Operand2!.Value.Target!.Value switch
+			{
+				Constants.RegisterTargets.AF => Constants.RegisterTargets.A,
+				Constants.RegisterTargets.BC => Constants.RegisterTargets.B,
+				Constants.RegisterTargets.DE => Constants.RegisterTargets.C,
+				Constants.RegisterTargets.HL => Constants.RegisterTargets.D,
+				Constants.RegisterTargets.IX => Constants.RegisterTargets.E,
+				Constants.RegisterTargets.IY => Constants.RegisterTargets.H,
+				Constants.RegisterTargets.SP => Constants.RegisterTargets.L,
+				_ => operation.Operand2!.Value.Target!.Value,
+			};
+		}
+
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
-		MemoryResult operandRead1 = GetOperandValue(operation.Operand1!.Value, Constants.DataSize.DWord);
+		MemoryResult operandRead1 = GetOperandValue(fixedOperand1, Constants.DataSize.DWord);
 		cycles += operandRead1.Cycles;
 
-		MemoryResult operandRead2 = GetOperandValue(operation.Operand2!.Value, Constants.DataSize.Word);
+		MemoryResult operandRead2 = GetOperandValue(fixedOperand2, Constants.DataSize.Word);
 		cycles += operandRead2.Cycles;
 
 		uint scaledIndex = BitHelper.SignExtend(operandRead2.Value, 16);
@@ -96,7 +134,7 @@ internal partial class CPU
 		cycles += Config.DWordALUCost;
 
 		MemoryResult operandWrite = WritebackOperand(
-			operation.Operand1!.Value,
+			fixedOperand1,
 			Constants.DataSize.DWord,
 			effectiveAddress
 		);
