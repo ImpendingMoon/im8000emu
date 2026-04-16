@@ -18,11 +18,11 @@ internal partial class CPU
 
 		if (_interruptMode == 1)
 		{
-			_interruptBus.Acknowledge(false);
+			_interruptBus.AcknowledgeInterrupt();
 			return Internal_ServiceInterrupt(1);
 		}
 
-		byte number = _interruptBus.Acknowledge(false);
+		byte number = _interruptBus.AcknowledgeInterrupt();
 		return Internal_ServiceInterrupt(number);
 	}
 
@@ -33,7 +33,7 @@ internal partial class CPU
 		Registers.SetFlag(Constants.FlagMasks.EnableInterruptsSave, iff1);
 		Registers.SetFlag(Constants.FlagMasks.EnableInterrupts, false);
 
-		_interruptBus.Acknowledge(true);
+		_interruptBus.AcknowledgeInterrupt();
 		return Internal_ServiceInterrupt(2);
 	}
 
@@ -133,11 +133,7 @@ internal partial class CPU
 		uint effectiveAddress = operandRead1.Value + scaledIndex;
 		cycles += Config.DWordALUCost;
 
-		MemoryResult operandWrite = WritebackOperand(
-			fixedOperand1,
-			Constants.DataSize.DWord,
-			effectiveAddress
-		);
+		MemoryResult operandWrite = WritebackOperand(fixedOperand1, Constants.DataSize.DWord, effectiveAddress);
 		cycles += operandWrite.Cycles;
 
 		return cycles;
@@ -3138,6 +3134,8 @@ internal partial class CPU
 		MemoryResult popRead = Internal_Pop();
 		cycles += popRead.Cycles;
 		Registers.SetRegister(Constants.RegisterTargets.PC, Constants.DataSize.DWord, popRead.Value);
+
+		_interruptBus.CompleteInterrupt();
 
 		return cycles;
 	}

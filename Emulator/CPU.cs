@@ -120,7 +120,7 @@ internal partial class CPU
 	public DecodedOperation Decode()
 	{
 		// If waiting for interrupts, handle them
-		if (_interruptBus.HasPendingNmi)
+		if (_interruptBus.IsNonMaskableInterruptPending())
 		{
 			return new DecodedOperation
 			{
@@ -128,7 +128,7 @@ internal partial class CPU
 			};
 		}
 
-		if (_interruptBus.HasPendingInterrupt && Registers.GetFlag(Constants.FlagMasks.EnableInterrupts))
+		if (_interruptBus.IsInterruptPending() && Registers.GetFlag(Constants.FlagMasks.EnableInterrupts))
 		{
 			return new DecodedOperation
 			{

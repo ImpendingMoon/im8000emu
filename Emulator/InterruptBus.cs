@@ -4,88 +4,110 @@ namespace im8000emu.Emulator;
 
 internal class InterruptBus
 {
-	private readonly PriorityQueue<IInterruptingDevice, int> _irqQueue = new();
-	// Each entry is (priority, device). PriorityQueue dequeues smallest priority first.
-	private readonly PriorityQueue<IInterruptingDevice, int> _nmiQueue = new();
-
-	private readonly List<(int Priority, IInterruptingDevice Device)> _registrations = [];
-
-	public bool HasPendingNmi
-	{
-		get
-		{
-			RebuildQueue(_nmiQueue, true);
-			return _nmiQueue.Count > 0;
-		}
-	}
-
-	public bool HasPendingInterrupt
-	{
-		get
-		{
-			RebuildQueue(_irqQueue, false);
-			return _irqQueue.Count > 0;
-		}
-	}
+	// Would use PriorityQueue, but doesn't implement IEnumerable
+	private readonly List<(IInterruptingDevice device, int priority)> _devices = [];
 
 	/// <summary>
-	///     Registers a device on the bus with a given priority.
-	///     Lower priority values are serviced first.
-	///     Each device can only be registered once, and each priority value must be unique.
+	///     Attaches a device to the interrupt daisy-chain.
 	/// </summary>
-	public void RegisterDevice(IInterruptingDevice device, int priority)
+	/// <param name="priority">Priority in the daisy-chain. Lower values are higher priority.</param>
+	/// <param name="device">Device to attach</param>
+	/// <exception cref="ArgumentException">If an existing device already uses this priority.</exception>
+	public void AttachDevice(IInterruptingDevice device, int priority)
 	{
-		if (_registrations.Any(r => r.Priority == priority))
+		for (int i = 0; i < _devices.Count; i++)
 		{
-			throw new ArgumentException(
-				$"Priority {priority} is already assigned to another device.",
-				nameof(priority)
-			);
-		}
+			(_, int existingPriority) = _devices[i];
 
-		_registrations.Add((priority, device));
-	}
-
-	/// <summary>
-	///     Acknowledges the highest-priority pending interrupt of the requested class.
-	///     Calls OnInterruptAcknowledge on the device, which is expected to return its interrupt number and
-	///     de-assert its interrupt line. NMI interrupt numbers should be ignored by the CPU.
-	///     The CPU should always call HasPendingNmi/Interrupt before calling Acknowledge.
-	/// </summary>
-	/// <param name="nmi">
-	///     True acknowledges the highest-priority pending NMI, else maskable interrupt.
-	/// </param>
-	/// <returns>
-	///     The interrupt number
-	/// </returns>
-	public byte Acknowledge(bool nmi)
-	{
-		PriorityQueue<IInterruptingDevice, int> queue = nmi ? _nmiQueue : _irqQueue;
-
-		if (!queue.TryDequeue(out IInterruptingDevice? device, out _))
-		{
-			throw new InvalidOperationException(
-				nmi ? "No pending NMI to acknowledge." : "No pending maskable interrupt to acknowledge."
-			);
-		}
-
-		return device.OnInterruptAcknowledged();
-	}
-
-	/// <summary>
-	///     Clears and repopulates the interrupt queue with any device requesting an interrupt
-	/// </summary>
-	private void RebuildQueue(PriorityQueue<IInterruptingDevice, int> queue, bool nmi)
-	{
-		queue.Clear();
-
-		foreach ((int priority, IInterruptingDevice device) in _registrations)
-		{
-			bool raised = nmi ? device.RaisedNonMaskableInterrupt : device.RaisedInterrupt;
-			if (raised)
+			if (existingPriority == priority)
 			{
-				queue.Enqueue(device, priority);
+				throw new ArgumentException($"Cannot attach device, conflicting priority {priority}");
+			}
+
+			if (existingPriority > priority)
+			{
+				_devices.Insert(i, (device, priority));
+				return;
 			}
 		}
+
+		_devices.Add((device, priority));
+	}
+
+	public bool IsInterruptPending()
+	{
+		foreach ((IInterruptingDevice device, _) in _devices)
+		{
+			if (device.INT)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public bool IsNonMaskableInterruptPending()
+	{
+		foreach ((IInterruptingDevice device, _) in _devices)
+		{
+			if (device.NMI)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	///     Called by the CPU to acknowledge an interrupt. Finds the highest-priority
+	///     eligible device and lets it respond.
+	/// </summary>
+	/// <returns>The 8-bit interrupt number, or 0xFF if no device responds</returns>
+	public byte AcknowledgeInterrupt()
+	{
+		for (int i = 0; i < _devices.Count; i++)
+		{
+			IInterruptingDevice device = _devices[i].device;
+
+			if (device.INT && IsEligibleForInterrupt(i))
+			{
+				return device.OnInterruptAcknowledge();
+			}
+		}
+
+		return 0xFF;
+	}
+
+	/// <summary>
+	///     Called by the CPU to complete an interrupt (RETI/RETN).
+	/// </summary>
+	public void CompleteInterrupt()
+	{
+		foreach ((IInterruptingDevice device, _) in _devices)
+		{
+			if (device.IsServicingInterrupt)
+			{
+				device.OnInterruptComplete();
+			}
+		}
+	}
+
+	/// <summary>
+	///     A device is eligible to be acknowledged only if no higher-priority device
+	///     is currently servicing an interrupt.
+	/// </summary>
+	private bool IsEligibleForInterrupt(int deviceIndex)
+	{
+		for (int i = 0; i < deviceIndex; i++)
+		{
+			if (_devices[i].device.IsServicingInterrupt)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

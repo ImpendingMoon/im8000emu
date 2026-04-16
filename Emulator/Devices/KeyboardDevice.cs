@@ -29,14 +29,26 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 	private bool _enableInterrupts;
 	private bool _enableKeyboard;
 
-	public bool RaisedInterrupt { get; private set; }
-	public bool RaisedNonMaskableInterrupt => false;
+	public bool INT { get; private set; }
+	public bool NMI => false;
 
-	public byte OnInterruptAcknowledged()
+	public bool IsServicingInterrupt { get; private set; }
+
+	public byte OnInterruptAcknowledge()
 	{
-		// Probably need to figure out how we send signals with RETI/RETN to unlatch interrupt.
-		RaisedInterrupt = false;
+		if (!INT)
+		{
+			return 0xFF;
+		}
+
+		INT = false;
+		IsServicingInterrupt = true;
 		return 0x18;
+	}
+
+	public void OnInterruptComplete()
+	{
+		IsServicingInterrupt = false;
 	}
 
 	public uint Size => 4;
@@ -172,10 +184,8 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 				continue;
 			}
 
-			if (newHeldFrames == RepeatDelayFrames
-				|| (newHeldFrames > RepeatDelayFrames
-				&& (newHeldFrames - RepeatDelayFrames) % RepeatRateFrames == 0)
-			)
+			if (newHeldFrames == RepeatDelayFrames ||
+				(newHeldFrames > RepeatDelayFrames && (newHeldFrames - RepeatDelayFrames) % RepeatRateFrames == 0))
 			{
 				AddKey(repeatScancode);
 			}
@@ -191,7 +201,7 @@ internal class KeyboardDevice : IMemoryDevice, IInterruptingDevice
 	{
 		if (_enableInterrupts)
 		{
-			RaisedInterrupt = true;
+			INT = true;
 		}
 
 		foreach (byte b in scancode)
