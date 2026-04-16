@@ -1,4 +1,5 @@
-﻿using im8000emu.Helpers;
+﻿using System.Diagnostics;
+using im8000emu.Helpers;
 
 namespace im8000emu.Emulator;
 
@@ -47,10 +48,7 @@ internal partial class CPU
 	// Load
 	private int Execute_LD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("LD requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "LD requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -66,10 +64,7 @@ internal partial class CPU
 	// Load Effective Address
 	private int Execute_LEA(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("LEA requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "LEA requires two operands");
 
 		Operand fixedOperand1 = operation.Operand1!.Value;
 
@@ -126,7 +121,7 @@ internal partial class CPU
 			Constants.DataSize.Word => scaledIndex << 1,
 			Constants.DataSize.DWord => scaledIndex << 2,
 			Constants.DataSize.QWord => scaledIndex << 3,
-			_ => throw new EmulatorFaultException("Invalid size in Execute_LEA"),
+			_ => throw new UnreachableException("Invalid size in Execute_LEA"),
 		};
 		cycles += Config.DWordALUCost;
 
@@ -142,10 +137,7 @@ internal partial class CPU
 	// Exchange
 	private int Execute_EX(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("EX requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "EX requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -173,15 +165,12 @@ internal partial class CPU
 	// Exchange with Alternate
 	private int Execute_EX_Alt(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EX_Alt requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "EX_Alt requires one operand");
 
-		if (operation.Operand1!.Value.Target is null || operation.Operand1!.Value.Indirect)
-		{
-			throw new EmulatorFaultException("EX_Alt can only operate on register targets");
-		}
+		Debug.Assert(
+			operation.Operand1!.Value.Target is not null && !operation.Operand1!.Value.Indirect,
+			"EX_Alt can only operate on register targets"
+		);
 
 		if (operation.DataSize == Constants.DataSize.Byte)
 		{
@@ -200,10 +189,7 @@ internal partial class CPU
 	// Exchange Primary with Alternate
 	private int Execute_EXX(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EXX requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "EXX requires no operands");
 
 		ExchangeWithAlternate(Constants.RegisterTargets.BC, Constants.DataSize.DWord);
 		ExchangeWithAlternate(Constants.RegisterTargets.DE, Constants.DataSize.DWord);
@@ -215,10 +201,7 @@ internal partial class CPU
 	// Exchange Index with Alternate
 	private int Execute_EXI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EXI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "EXI requires no operands");
 
 		ExchangeWithAlternate(Constants.RegisterTargets.IX, Constants.DataSize.DWord);
 		ExchangeWithAlternate(Constants.RegisterTargets.IY, Constants.DataSize.DWord);
@@ -230,10 +213,7 @@ internal partial class CPU
 	// Exchange Halves
 	private int Execute_EXH(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EXH requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "EXH requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -265,6 +245,10 @@ internal partial class CPU
 				value = temp;
 				break;
 			}
+			default:
+			{
+				throw new UnreachableException($"EXH is not implemented for size {operation.DataSize}");
+			}
 		}
 
 		MemoryResult operandWrite = WritebackOperand(operation.Operand1!.Value, operation.DataSize, value);
@@ -276,15 +260,9 @@ internal partial class CPU
 	// Push to stack
 	private int Execute_PUSH(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("PUSH requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "PUSH requires one operand");
 
-		if (operation.DataSize != Constants.DataSize.DWord)
-		{
-			throw new EmulatorFaultException("PUSH only operates on DWord operands");
-		}
+		Debug.Assert(operation.DataSize == Constants.DataSize.DWord, "PUSH only operates on DWord operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -299,15 +277,9 @@ internal partial class CPU
 	// Pop from stack
 	private int Execute_POP(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("POP requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "POP requires one operand");
 
-		if (operation.DataSize != Constants.DataSize.DWord)
-		{
-			throw new EmulatorFaultException("POP only operates on DWord operands");
-		}
+		Debug.Assert(operation.DataSize == Constants.DataSize.DWord, "POP only operates on DWord operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -324,10 +296,7 @@ internal partial class CPU
 	// In/Out
 	private int Execute_IN_OUT(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("IN/OUT requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "IN/OUT requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -364,10 +333,7 @@ internal partial class CPU
 	// Load and Increment
 	private int Execute_LDI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("LDI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "LDI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -379,10 +345,7 @@ internal partial class CPU
 	// Load, Increment, and Repeat
 	private int Execute_LDIR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("LDIR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "LDIR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -395,10 +358,7 @@ internal partial class CPU
 	// Load and Decrement
 	private int Execute_LDD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("LDD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "LDD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -410,10 +370,7 @@ internal partial class CPU
 	// Load, Decrement, and Repeat
 	private int Execute_LDDR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("LDDR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "LDDR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -426,10 +383,7 @@ internal partial class CPU
 	// Compare and Increment
 	private int Execute_CPI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CPI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "CPI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -441,10 +395,7 @@ internal partial class CPU
 	// Compare, Increment, and Repeat
 	private int Execute_CPIR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CPIR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "CPIR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -457,10 +408,7 @@ internal partial class CPU
 	// Compare and Decrement
 	private int Execute_CPD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CPD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "CPD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -472,10 +420,7 @@ internal partial class CPU
 	// Compare, Decrement, and Repeat
 	private int Execute_CPDR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CPDR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "CPDR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -488,10 +433,7 @@ internal partial class CPU
 	// Test and Increment
 	private int Execute_TSI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("TSI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "TSI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -503,10 +445,7 @@ internal partial class CPU
 	// Test, Increment, and Repeat
 	private int Execute_TSIR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("TSIR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "TSIR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -519,10 +458,7 @@ internal partial class CPU
 	// Test and Decrement
 	private int Execute_TSD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("TSD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "TSD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -534,10 +470,7 @@ internal partial class CPU
 	// Test, Decrement, and Repeat
 	private int Execute_TSDR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("TSDR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "TSDR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -550,10 +483,7 @@ internal partial class CPU
 	// Input and Increment
 	private int Execute_INI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("INI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "INI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -565,10 +495,7 @@ internal partial class CPU
 	// Input, Increment, and Repeat
 	private int Execute_INIR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("INIR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "INIR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -581,10 +508,7 @@ internal partial class CPU
 	// Input and Decrement
 	private int Execute_IND(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("IND requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "IND requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -596,10 +520,7 @@ internal partial class CPU
 	// Input, Decrement, and Repeat
 	private int Execute_INDR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("INDR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "INDR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -612,10 +533,7 @@ internal partial class CPU
 	// Output and Increment
 	private int Execute_OUTI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("OUTI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "OUTI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -627,10 +545,7 @@ internal partial class CPU
 	// Output, Increment, and Repeat
 	private int Execute_OTIR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("OTIR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "OTIR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -643,10 +558,7 @@ internal partial class CPU
 	// Output and Decrement
 	private int Execute_OUTD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("OUTD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "OUTD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -658,10 +570,7 @@ internal partial class CPU
 	// Output, Decrement, and Repeat
 	private int Execute_OTDR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("OTDR requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "OTDR requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -674,10 +583,7 @@ internal partial class CPU
 	// Add
 	private int Execute_ADD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("ADD requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "ADD requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -741,9 +647,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_ADD is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_ADD is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -760,10 +664,7 @@ internal partial class CPU
 	// Add with Carry
 	private int Execute_ADC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("ADC requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "ADC requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -830,9 +731,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_ADC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_ADC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -849,10 +748,7 @@ internal partial class CPU
 	// Subtract
 	private int Execute_SUB(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SUB requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SUB requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -916,9 +812,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SUB is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SUB is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -935,10 +829,7 @@ internal partial class CPU
 	// Subtract with Carry
 	private int Execute_SBC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SBC requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SBC requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1005,9 +896,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SBC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SBC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1024,10 +913,7 @@ internal partial class CPU
 	// Compare
 	private int Execute_CP(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("CP requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "CP requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1047,10 +933,7 @@ internal partial class CPU
 	// Increment
 	private int Execute_INC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("INC requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "INC requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1108,9 +991,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_INC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_INC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1127,10 +1008,7 @@ internal partial class CPU
 	// Decrement
 	private int Execute_DEC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("DEC requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "DEC requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1189,9 +1067,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_DEC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_DEC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1209,10 +1085,7 @@ internal partial class CPU
 	// Implementation taken from "The Undocumented Z80 Documented" by Sean Young
 	private int Execute_DAA(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("DAA requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "DAA requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 		ushort a = (byte)Registers.GetRegister(Constants.RegisterTargets.A, Constants.DataSize.Byte);
@@ -1281,10 +1154,7 @@ internal partial class CPU
 	// Implemented as 0 - x for flags
 	private int Execute_NEG(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("NEG requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "NEG requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1342,9 +1212,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_NEG is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_NEG is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1361,10 +1229,7 @@ internal partial class CPU
 	// Sign Extend
 	private int Execute_EXT(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EXT requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "EXT requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1393,9 +1258,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_EXT is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_EXT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1408,10 +1271,7 @@ internal partial class CPU
 	// Multiply
 	private int Execute_MLT(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("MLT requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "MLT requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1459,9 +1319,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_MLT is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_MLT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1479,10 +1337,7 @@ internal partial class CPU
 	// Divide
 	private int Execute_DIV(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("DIV requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "DIV requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1547,9 +1402,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_DIV is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_DIV is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1562,10 +1415,7 @@ internal partial class CPU
 	// Signed Divide
 	private int Execute_SDIV(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("SDIV requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "SDIV requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1638,7 +1488,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
+				throw new UnreachableException(
 					$"Execute_SDIV is not implemented for operand size {operation.DataSize}"
 				);
 			}
@@ -1653,10 +1503,7 @@ internal partial class CPU
 	// AND
 	private int Execute_AND(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("AND requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "AND requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1711,9 +1558,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_AND is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_AND is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1733,10 +1578,7 @@ internal partial class CPU
 	// OR
 	private int Execute_OR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("OR requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "OR requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1791,9 +1633,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_OR is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_OR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1813,10 +1653,7 @@ internal partial class CPU
 	// XOR
 	private int Execute_XOR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("XOR requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "XOR requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1871,9 +1708,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_XOR is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_XOR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1893,10 +1728,7 @@ internal partial class CPU
 	// TST
 	private int Execute_TST(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("TST requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "TST requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1914,10 +1746,7 @@ internal partial class CPU
 	// CPL
 	private int Execute_CPL(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CPL requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "CPL requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -1966,9 +1795,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_CPL is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_CPL is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -1988,10 +1815,7 @@ internal partial class CPU
 	// Test bit
 	private int Execute_BIT(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("BIT requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "BIT requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2026,9 +1850,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_BIT is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_BIT is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2043,10 +1865,7 @@ internal partial class CPU
 	// Set bit
 	private int Execute_SET(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SET requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SET requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2079,9 +1898,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SET is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SET is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2097,10 +1914,7 @@ internal partial class CPU
 	// Reset bit
 	private int Execute_RES(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("RES requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "RES requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2133,9 +1947,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_RES is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_RES is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2151,10 +1963,7 @@ internal partial class CPU
 	// Rotate left circular
 	private int Execute_RLC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("RLC requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "RLC requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2230,9 +2039,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_RLC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_RLC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2251,10 +2058,7 @@ internal partial class CPU
 	// Rotate right circular
 	private int Execute_RRC(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("RRC requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "RRC requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2330,9 +2134,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_RRC is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_RRC is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2351,10 +2153,7 @@ internal partial class CPU
 	// Rotate left
 	private int Execute_RL(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("RL requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "RL requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2433,9 +2232,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SLA is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2454,10 +2251,7 @@ internal partial class CPU
 	// Rotate right
 	private int Execute_RR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("RR requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "RR requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2533,9 +2327,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_RR is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_RR is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2554,10 +2346,7 @@ internal partial class CPU
 	// Shift left arithmetic
 	private int Execute_SLA(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SLA requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SLA requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2633,9 +2422,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SLA is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SLA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2654,10 +2441,7 @@ internal partial class CPU
 	// Shift right arithmetic
 	private int Execute_SRA(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SRA requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SRA requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2733,9 +2517,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SRA is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SRA is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2754,10 +2536,7 @@ internal partial class CPU
 	// Shift right logical
 	private int Execute_SRL(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is null)
-		{
-			throw new EmulatorFaultException("SRL requires two operands");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is not null, "SRL requires two operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2833,9 +2612,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException(
-					$"Execute_SRL is not implemented for operand size {operation.DataSize}"
-				);
+				throw new UnreachableException($"Execute_SRL is not implemented for operand size {operation.DataSize}");
 			}
 		}
 
@@ -2854,10 +2631,7 @@ internal partial class CPU
 	// Rotate Left Decimal
 	private int Execute_RLD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("RLD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "RLD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2895,10 +2669,7 @@ internal partial class CPU
 	// Rotate Right Decimal
 	private int Execute_RRD(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("RRD requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "RRD requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2942,10 +2713,7 @@ internal partial class CPU
 	// Jump
 	private int Execute_JP(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("JP requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "JP requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2963,10 +2731,7 @@ internal partial class CPU
 	// Jump Relative Short
 	private int Execute_JR_s8(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("JR_s8 requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "JR_s8 requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -2990,10 +2755,7 @@ internal partial class CPU
 	// Jump Relative
 	private int Execute_JR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("JR requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "JR requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3017,10 +2779,7 @@ internal partial class CPU
 	// Call
 	private int Execute_CALL(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CALL requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "CALL requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3041,10 +2800,7 @@ internal partial class CPU
 	// Call Relative Short
 	private int Execute_CALLR_s8(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CALLR_s8 requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "CALLR_s8 requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3069,10 +2825,7 @@ internal partial class CPU
 	// Call Relative
 	private int Execute_CALLR(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CALLR requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "CALLR requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3097,12 +2850,7 @@ internal partial class CPU
 	// Return
 	private int Execute_RET(in DecodedOperation operation)
 	{
-		if (operation.Operand2 is not null)
-		{
-			// RET is weird. Has a register select field that isn't used because
-			// it's in the B-Type encoding group
-			throw new EmulatorFaultException("RET requires zero or one operand");
-		}
+		Debug.Assert(operation.Operand2 is null, "RET requires zero or one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3120,10 +2868,7 @@ internal partial class CPU
 	// Restores IFF1 from IFF2 and returns from interrupt service routine
 	private int Execute_RETI(in DecodedOperation operation)
 	{
-		if (operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("RETI requires zero or one operand");
-		}
+		Debug.Assert(operation.Operand2 is null, "RETI requires zero or one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3144,10 +2889,7 @@ internal partial class CPU
 	// Restores IFF1 from IFF2 and returns from NMI service routine
 	private int Execute_RETN(in DecodedOperation operation)
 	{
-		if (operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("RETN requires zero or one operand");
-		}
+		Debug.Assert(operation.Operand2 is null, "RETN requires zero or one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3165,15 +2907,9 @@ internal partial class CPU
 	// Decrement B, Jump if Not Zero
 	private int Execute_DJNZ(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("DJNZ requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "DJNZ requires one operand");
 
-		if (operation.Operand1!.Value.Immediate is null)
-		{
-			throw new EmulatorFaultException("DJNZ requires one immediate operand");
-		}
+		Debug.Assert(operation.Operand1!.Value.Immediate is not null, "DJNZ requires one immediate operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3195,15 +2931,9 @@ internal partial class CPU
 	// Jump if A Not Zero
 	private int Execute_JANZ(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("JANZ requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "JANZ requires one operand");
 
-		if (operation.Operand1!.Value.Immediate is null)
-		{
-			throw new EmulatorFaultException("JANZ requires one immediate operand");
-		}
+		Debug.Assert(operation.Operand1!.Value.Immediate is not null, "JANZ requires one immediate operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3223,15 +2953,9 @@ internal partial class CPU
 	// Jump if A is Zero
 	private int Execute_JAZ(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("JAZ requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "JAZ requires one operand");
 
-		if (operation.Operand1!.Value.Immediate is null)
-		{
-			throw new EmulatorFaultException("JAZ requires one immediate operand");
-		}
+		Debug.Assert(operation.Operand1!.Value.Immediate is not null, "JAZ requires one immediate operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3251,15 +2975,9 @@ internal partial class CPU
 	// Reset to Vector
 	private int Execute_RST(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("RST requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "RST requires one operand");
 
-		if (operation.Operand1!.Value.Immediate is null)
-		{
-			throw new EmulatorFaultException("RST requires one immediate operand");
-		}
+		Debug.Assert(operation.Operand1!.Value.Immediate is not null, "RST requires one immediate operand");
 
 		return operation.FetchCycles + Internal_ServiceInterrupt((byte)operation.Operand1!.Value.Immediate);
 	}
@@ -3267,10 +2985,7 @@ internal partial class CPU
 	// Set Carry Flag
 	private int Execute_SCF(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("SCF requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "SCF requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3282,10 +2997,7 @@ internal partial class CPU
 	// Complement Carry Flag
 	private int Execute_CCF(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("CCF requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "CCF requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3298,10 +3010,7 @@ internal partial class CPU
 	// Enable Interrupts
 	private int Execute_EI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("EI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "EI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3313,10 +3022,7 @@ internal partial class CPU
 	// Disable Interrupts
 	private int Execute_DI(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("DI requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "DI requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3329,10 +3035,7 @@ internal partial class CPU
 	// Set Interrupt Mode 1
 	private int Execute_IM1(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("IM1 requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "IM1 requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3344,10 +3047,7 @@ internal partial class CPU
 	// Set Interrupt Mode 2
 	private int Execute_IM2(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("IM2 requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "IM2 requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3359,10 +3059,7 @@ internal partial class CPU
 	// Halt - suspend execution until an interrupt occurs
 	private int Execute_HALT(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is not null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("HALT requires no operands");
-		}
+		Debug.Assert(operation.Operand1 is null && operation.Operand2 is null, "HALT requires no operands");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3374,10 +3071,7 @@ internal partial class CPU
 	// Load Immediate into I register
 	private int Execute_LD_I_NN(in DecodedOperation operation)
 	{
-		if (operation.Operand1 is null || operation.Operand2 is not null)
-		{
-			throw new EmulatorFaultException("LD_I_NN requires one operand");
-		}
+		Debug.Assert(operation.Operand1 is not null && operation.Operand2 is null, "LD_I_NN requires one operand");
 
 		int cycles = operation.FetchCycles + Config.BaseInstructionCost;
 
@@ -3441,7 +3135,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new EmulatorFaultException($"Internal_Block_LD is not implemented for DataSize {size}"),
+			_ => throw new UnreachableException($"Internal_Block_LD is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3494,7 +3188,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new EmulatorFaultException($"Block_CP is not implemented for DataSize {size}"),
+			_ => throw new UnreachableException($"Block_CP is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3542,7 +3236,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new EmulatorFaultException($"Block_TST is not implemented for DataSize {size}"),
+			_ => throw new UnreachableException($"Block_TST is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3591,7 +3285,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new EmulatorFaultException($"Internal_Block_IN is not implemented for DataSize {size}"),
+			_ => throw new UnreachableException($"Internal_Block_IN is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3640,7 +3334,7 @@ internal partial class CPU
 			Constants.DataSize.Byte => 1,
 			Constants.DataSize.Word => 2,
 			Constants.DataSize.DWord => 4,
-			_ => throw new EmulatorFaultException($"Internal_Block_OUT is not implemented for DataSize {size}"),
+			_ => throw new UnreachableException($"Internal_Block_OUT is not implemented for DataSize {size}"),
 		};
 
 		if (increment)
@@ -3720,7 +3414,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException($"Internal_CP is not implemented for operand size {size}");
+				throw new UnreachableException($"Internal_CP is not implemented for operand size {size}");
 			}
 		}
 
@@ -3776,7 +3470,7 @@ internal partial class CPU
 
 			default:
 			{
-				throw new EmulatorFaultException($"Internal_TST is not implemented for operand size {size}");
+				throw new UnreachableException($"Internal_TST is not implemented for operand size {size}");
 			}
 		}
 
