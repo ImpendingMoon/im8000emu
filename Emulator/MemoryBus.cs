@@ -81,6 +81,34 @@ internal class MemoryBus
 		return result;
 	}
 
+	private int BusCycles(Constants.DataSize size, bool aligned)
+	{
+		int cycles;
+
+		if (Config.UseNarrowBus)
+		{
+			cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => 2,
+				Constants.DataSize.DWord => 4,
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
+			};
+		}
+		else
+		{
+			cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => aligned ? 1 : 2,
+				Constants.DataSize.DWord => aligned ? 2 : 3,
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
+			};
+		}
+
+		return cycles * (Config.BusCycleCost + _waitStates);
+	}
+
 	/// <summary>
 	///     Thrown in here where we don't have CPU context
 	/// </summary>
@@ -119,33 +147,5 @@ internal class MemoryBus
 		{
 			return address >= StartAddress && address <= EndAddress;
 		}
-	}
-
-	private int BusCycles(Constants.DataSize size, bool aligned)
-	{
-		int cycles;
-
-		if (Config.UseNarrowBus)
-		{
-			cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => 2,
-				Constants.DataSize.DWord => 4,
-				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
-			};
-		}
-		else
-		{
-			cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => aligned ? 1 : 2,
-				Constants.DataSize.DWord => aligned ? 2 : 3,
-				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
-			};
-		}
-
-		return cycles * (Config.BusCycleCost + _waitStates);
 	}
 }

@@ -20,7 +20,7 @@ internal class EmulatedSystem
 		var biosRom = new MemoryDevice(romData, 0x10000, true);
 		var mainRam = new MemoryDevice(Config.MemorySize);
 
-		var memoryBus = new MemoryBus(waitStates: 0);
+		var memoryBus = new MemoryBus(0);
 		// BIOS ROM mapped to 0x00_0000-0x00_FFFF
 		// BIOS extension ROMs follow in 256KB blocks until 0x1F_FFFF
 		memoryBus.AttachDevice(biosRom, 0x00_0000, 0x00_FFFF);
@@ -29,7 +29,7 @@ internal class EmulatedSystem
 		_videoCard = new VideoDevice(memoryBus);
 		_keyboard = new KeyboardDevice();
 
-		var ioBus = new MemoryBus(waitStates: Config.IOCycleCost - Config.BusCycleCost);
+		var ioBus = new MemoryBus(Config.IOCycleCost - Config.BusCycleCost);
 		ioBus.AttachDevice(_keyboard, 0x20, 0x3F);
 		ioBus.AttachDevice(_videoCard, 0x60, 0x7F);
 

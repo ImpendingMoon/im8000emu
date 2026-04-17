@@ -207,8 +207,6 @@ internal partial class CPU
 		};
 	}
 
-
-
 	private struct ALUFlagState
 	{
 		public bool Carry;
