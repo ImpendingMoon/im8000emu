@@ -9,6 +9,7 @@ internal class EmulatedSystem
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Constants.TargetFramerate;
 	private readonly KeyboardDevice _keyboard;
 	private readonly VideoDevice _videoCard;
+	private readonly List<ISteppingDevice> _steppingDevices;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
@@ -41,6 +42,8 @@ internal class EmulatedSystem
 
 		CPU = new CPU(memoryBus, ioBus, interruptBus);
 		CPU.Reset();
+
+		_steppingDevices = [];
 	}
 
 	public Image Frame => _videoCard.GetFrame();
@@ -76,6 +79,11 @@ internal class EmulatedSystem
 			{
 				DecodedOperation operation = CPU.Decode();
 				cycles = CPU.Execute(operation);
+
+				foreach (ISteppingDevice device in _steppingDevices)
+				{
+					cycles += device.Step(cycles);
+				}
 			}
 			catch (CpuException ex)
 			{

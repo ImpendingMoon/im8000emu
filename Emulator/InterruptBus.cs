@@ -4,7 +4,6 @@ namespace im8000emu.Emulator;
 
 internal class InterruptBus
 {
-	// Would use PriorityQueue, but doesn't implement IEnumerable
 	private readonly List<(IInterruptingDevice device, int priority)> _devices = [];
 
 	/// <summary>
