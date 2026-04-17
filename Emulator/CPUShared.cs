@@ -28,7 +28,7 @@ internal partial class CPU
 
 		try
 		{
-			return activeBus.Read(address, size, useIO);
+			return activeBus.Read(address, size);
 		}
 		catch (MemoryBus.MemoryBusException ex)
 		{
@@ -42,7 +42,7 @@ internal partial class CPU
 
 		try
 		{
-			return activeBus.Write(address, size, value, useIO);
+			return activeBus.Write(address, size, value);
 		}
 		catch (MemoryBus.MemoryBusException ex)
 		{

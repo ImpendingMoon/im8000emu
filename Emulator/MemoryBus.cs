@@ -5,6 +5,12 @@ namespace im8000emu.Emulator;
 internal class MemoryBus
 {
 	private readonly List<Mapping> _mappings = [];
+	private readonly int _waitStates;
+
+	public MemoryBus(int waitStates)
+	{
+		_waitStates = waitStates;
+	}
 
 	public void AttachDevice(IMemoryDevice device, uint baseAddress, uint endAddress)
 	{
@@ -12,7 +18,7 @@ internal class MemoryBus
 		_mappings.Add(mapping);
 	}
 
-	public MemoryResult Read(uint address, Constants.DataSize size, bool useIO = false)
+	public MemoryResult Read(uint address, Constants.DataSize size)
 	{
 		var result = new MemoryResult();
 		bool aligned = (address & 1) == 0;
@@ -25,7 +31,7 @@ internal class MemoryBus
 				try
 				{
 					result.Value = mapping.Device.Read(offset, size);
-					result.Cycles = BusCycles(size, aligned, useIO);
+					result.Cycles = BusCycles(size, aligned);
 					return result;
 				}
 				catch (DeviceException ex)
@@ -44,7 +50,7 @@ internal class MemoryBus
 		return result;
 	}
 
-	public MemoryResult Write(uint address, Constants.DataSize size, uint value, bool useIO = false)
+	public MemoryResult Write(uint address, Constants.DataSize size, uint value)
 	{
 		var result = new MemoryResult();
 		bool aligned = (address & 1) == 0;
@@ -57,7 +63,7 @@ internal class MemoryBus
 				try
 				{
 					mapping.Device.Write(offset, size, value);
-					result.Cycles = BusCycles(size, aligned, useIO);
+					result.Cycles = BusCycles(size, aligned);
 					return result;
 				}
 				catch (DeviceException ex)
@@ -72,7 +78,6 @@ internal class MemoryBus
 			throw new MemoryBusException(address, size, true, "unmapped address");
 		}
 
-		result.Value = 0xFFFFFFFF;
 		return result;
 	}
 
@@ -116,7 +121,7 @@ internal class MemoryBus
 		}
 	}
 
-	private int BusCycles(Constants.DataSize size, bool aligned, bool useIO)
+	private int BusCycles(Constants.DataSize size, bool aligned)
 	{
 		int cycles;
 
@@ -141,6 +146,6 @@ internal class MemoryBus
 			};
 		}
 
-		return cycles * (useIO ? Config.IOCycleCost : Config.BusCycleCost);
+		return cycles * (Config.BusCycleCost + _waitStates);
 	}
 }
