@@ -12,8 +12,11 @@ internal class MemoryBus
 		_mappings.Add(mapping);
 	}
 
-	public uint Read(uint address, Constants.DataSize size)
+	public MemoryResult Read(uint address, Constants.DataSize size, bool useIO = false)
 	{
+		var result = new MemoryResult();
+		bool aligned = (address & 1) == 0;
+
 		foreach (Mapping mapping in _mappings)
 		{
 			if (mapping.ContainsAddress(address))
@@ -21,7 +24,9 @@ internal class MemoryBus
 				uint offset = address - mapping.StartAddress;
 				try
 				{
-					return mapping.Device.Read(offset, size);
+					result.Value = mapping.Device.Read(offset, size);
+					result.Cycles = BusCycles(size, aligned, useIO);
+					return result;
 				}
 				catch (DeviceException ex)
 				{
@@ -35,11 +40,15 @@ internal class MemoryBus
 			throw new MemoryBusException(address, size, false, "unmapped address");
 		}
 
-		return 0xFFFF_FFFF;
+		result.Value = 0xFFFFFFFF;
+		return result;
 	}
 
-	public void Write(uint address, Constants.DataSize size, uint value)
+	public MemoryResult Write(uint address, Constants.DataSize size, uint value, bool useIO = false)
 	{
+		var result = new MemoryResult();
+		bool aligned = (address & 1) == 0;
+
 		foreach (Mapping mapping in _mappings)
 		{
 			if (mapping.ContainsAddress(address))
@@ -48,12 +57,13 @@ internal class MemoryBus
 				try
 				{
 					mapping.Device.Write(offset, size, value);
+					result.Cycles = BusCycles(size, aligned, useIO);
+					return result;
 				}
 				catch (DeviceException ex)
 				{
 					throw new MemoryBusException(address, ex.Size, ex.IsWrite, ex.Reason);
 				}
-				return;
 			}
 		}
 
@@ -61,6 +71,9 @@ internal class MemoryBus
 		{
 			throw new MemoryBusException(address, size, true, "unmapped address");
 		}
+
+		result.Value = 0xFFFFFFFF;
+		return result;
 	}
 
 	/// <summary>
@@ -101,5 +114,33 @@ internal class MemoryBus
 		{
 			return address >= StartAddress && address <= EndAddress;
 		}
+	}
+
+	private int BusCycles(Constants.DataSize size, bool aligned, bool useIO)
+	{
+		int cycles;
+
+		if (Config.UseNarrowBus)
+		{
+			cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => 2,
+				Constants.DataSize.DWord => 4,
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
+			};
+		}
+		else
+		{
+			cycles = size switch
+			{
+				Constants.DataSize.Byte => 1,
+				Constants.DataSize.Word => aligned ? 1 : 2,
+				Constants.DataSize.DWord => aligned ? 2 : 3,
+				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
+			};
+		}
+
+		return cycles * (useIO ? Config.IOCycleCost : Config.BusCycleCost);
 	}
 }

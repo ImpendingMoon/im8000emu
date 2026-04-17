@@ -24,70 +24,30 @@ internal partial class CPU
 
 	private MemoryResult ReadMemory(uint address, Constants.DataSize size, bool useIO = false)
 	{
-		MemoryResult result;
-		bool aligned = (address & 1) == 0;
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
 		try
 		{
-			result.Value = activeBus.Read(address, size);
+			return activeBus.Read(address, size, useIO);
 		}
 		catch (MemoryBus.MemoryBusException ex)
 		{
 			throw new MemoryFaultException(ex.Address, ex.Size, ex.IsWrite, ex.Reason, CaptureContext());
 		}
-
-		result.Cycles = BusCycles(size, aligned, useIO);
-		return result;
 	}
 
 	private MemoryResult WriteMemory(uint address, Constants.DataSize size, uint value, bool useIO = false)
 	{
-		MemoryResult result;
-		result.Value = 0;
-		bool aligned = (address & 1) == 0;
 		MemoryBus activeBus = useIO ? _ioBus : _memoryBus;
 
 		try
 		{
-			activeBus.Write(address, size, value);
-			result.Value = activeBus.Read(address, size);
+			return activeBus.Write(address, size, value, useIO);
 		}
 		catch (MemoryBus.MemoryBusException ex)
 		{
 			throw new MemoryFaultException(ex.Address, ex.Size, ex.IsWrite, ex.Reason, CaptureContext());
 		}
-
-		result.Cycles = BusCycles(size, aligned, useIO);
-		return result;
-	}
-
-	private int BusCycles(Constants.DataSize size, bool aligned, bool useIO)
-	{
-		int cycles;
-
-		if (Config.UseNarrowBus)
-		{
-			cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => 2,
-				Constants.DataSize.DWord => 4,
-				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
-			};
-		}
-		else
-		{
-			cycles = size switch
-			{
-				Constants.DataSize.Byte => 1,
-				Constants.DataSize.Word => aligned ? 1 : 2,
-				Constants.DataSize.DWord => aligned ? 2 : 3,
-				_ => throw new EmulatorFaultException($"BusCycles: unhandled DataSize {size}"),
-			};
-		}
-
-		return cycles * (useIO ? Config.IOCycleCost : Config.BusCycleCost);
 	}
 
 	private MemoryResult GetOperandValue(in Operand operand, Constants.DataSize size)
@@ -247,11 +207,7 @@ internal partial class CPU
 		};
 	}
 
-	private struct MemoryResult
-	{
-		public uint Value;
-		public int Cycles;
-	}
+
 
 	private struct ALUFlagState
 	{
