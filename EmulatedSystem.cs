@@ -8,8 +8,8 @@ internal class EmulatedSystem
 {
 	private readonly int _cyclesPerFrame = Config.CpuSpeedHz / Constants.TargetFramerate;
 	private readonly KeyboardDevice _keyboard;
-	private readonly VideoDevice _videoCard;
 	private readonly List<ISteppingDevice> _steppingDevices;
+	private readonly VideoDevice _videoCard;
 
 	// Cycles remaining from the previous frame.
 	private int _cycleRemainder;
