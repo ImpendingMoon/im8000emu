@@ -29,21 +29,25 @@ internal class EmulatedSystem
 		_videoCard = new VideoDevice(memoryBus);
 		_keyboard = new KeyboardDevice();
 
+		var ctc = new CTCDevice();
+
 		var ioBus = new MemoryBus(Config.IOCycleCost - Config.BusCycleCost);
+		ioBus.AttachDevice(ctc, 0x00, 0x1F);
 		ioBus.AttachDevice(_keyboard, 0x20, 0x3F);
 		ioBus.AttachDevice(_videoCard, 0x60, 0x7F);
 
 		// TODO:
-		// - Z80 CTC, SIO, PIO, DMA
+		// - Z80 SIO, PIO, DMA
 		// - NEC uPD765A-compatible FDC, MC6845-based video card
 		// - New PIC to interface external interrupt sources with IM 2 bus
 		var interruptBus = new InterruptBus();
 		interruptBus.AttachDevice(_keyboard, 1);
+		interruptBus.AttachDevice(ctc, 2);
 
 		CPU = new CPU(memoryBus, ioBus, interruptBus);
 		CPU.Reset();
 
-		_steppingDevices = [];
+		_steppingDevices = [ctc];
 	}
 
 	public Image Frame => _videoCard.GetFrame();

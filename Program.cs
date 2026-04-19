@@ -34,7 +34,7 @@ internal class Program
 		byte[] romData = File.ReadAllBytes(filePath);
 		var system = new EmulatedSystem(romData);
 
-		Console.WriteLine($"im8000emu - {Config.CpuSpeedHz / 1_000_000} MHz, {Constants.TargetFramerate} fps target");
+		Console.WriteLine($"im8000emu - {Config.CpuSpeedHz / 1_000_000.0} MHz, {Constants.TargetFramerate} fps target");
 		Console.WriteLine($"ROM: {filePath} ({romData.Length:N0} bytes)");
 		Console.WriteLine();
 
