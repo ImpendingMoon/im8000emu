@@ -86,7 +86,7 @@ internal class EmulatedSystem
 
 				foreach (ISteppingDevice device in _steppingDevices)
 				{
-					cycles += device.Step(cycles);
+					device.Step(cycles);
 				}
 			}
 			catch (CpuException ex)

@@ -156,14 +156,12 @@ public class CTCDevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 		}
 	}
 
-	public int Step(int cycles)
+	public void Step(int cycles)
 	{
 		foreach (Channel ch in _channels)
 		{
 			ch.Step(cycles);
 		}
-
-		return 0;
 	}
 
 	/// <summary>

@@ -28,7 +28,7 @@ public class SIODevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 		throw new NotImplementedException();
 	}
 
-	public int Step(int cycles)
+	public void Step(int cycles)
 	{
 		throw new NotImplementedException();
 	}

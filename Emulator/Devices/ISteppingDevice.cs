@@ -8,9 +8,5 @@ public interface ISteppingDevice
 	///     Steps the number of cycles the previous CPU instruction took
 	/// </summary>
 	/// <param name="cycles"></param>
-	/// <returns>
-	///     Any additional cycles taken by the device, such as a DMA
-	///     controller taking control of the CPU bus.
-	/// </returns>
-	public int Step(int cycles);
+	public void Step(int cycles);
 }
