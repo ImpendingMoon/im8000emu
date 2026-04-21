@@ -3,6 +3,7 @@ namespace im8000emu.Emulator.Devices;
 /// <summary>
 ///     Zilog Z80 CTC.
 ///     Four independently programmable counter/timer channels.
+///		Channel 1/0 are set up to cascade
 ///     Address map (CS1:CS0 = address bits 1:0):
 ///     0x00 - Channel 0
 ///     0x01 - Channel 1
@@ -35,8 +36,13 @@ public class CTCDevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 	{
 		for (int i = 0; i < ChannelCount; i++)
 		{
-			_channels[i] = new Channel(i);
+			// Each channel notifies the device when its counter hits zero.
+			int capturedIndex = i;
+			_channels[i] = new Channel(capturedIndex, null);
 		}
+
+		// Channel 1 zero output clocks Channel 0's CLK/TRG input.
+		_channels[1].OnZero = _channels[0].ExternalClock;
 	}
 
 	public bool INT => _channels.Any(x => x.InterruptPending);
@@ -164,6 +170,21 @@ public class CTCDevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 		}
 	}
 
+	public void RegisterOnZero(int channel, Action action)
+	{
+		if (channel < 0 || channel >= ChannelCount)
+		{
+			throw new ArgumentOutOfRangeException(nameof(channel), "Channel must be between 0-4");
+		}
+
+		if (_channels[channel].OnZero is not null)
+		{
+			throw new InvalidOperationException($"Cannot register multiple events for {channel}");
+		}
+
+		_channels[channel].OnZero = action;
+	}
+
 	/// <summary>
 	///     Sends an external CLK/TRG pulse to the specified channel.
 	///     In counter mode this decrements the down-counter. In timer mode with
@@ -193,11 +214,17 @@ public class CTCDevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 		private byte _timeConstant; // 0-255 (0 = 256)
 		private bool _triggerRisingEdge; // edge selection for CLK/TRG (unused)
 
-		public Channel(int index)
+		public Channel(int index, Action? onZero)
 		{
 			Index = index;
+			OnZero = onZero;
 			HardwareReset();
 		}
+
+		/// <summary>
+		///     Invoked each time the down-counter rolls over to zero.
+		/// </summary>
+		public Action? OnZero { get; set; }
 
 		public bool InterruptPending { get; private set; }
 		public bool IsServicingInterrupt { get; private set; }
@@ -364,6 +391,8 @@ public class CTCDevice : IMemoryDevice, ISteppingDevice, IInterruptingDevice
 
 			if (_downCounter == 0)
 			{
+				OnZero?.Invoke();
+
 				if (_enableInterrupts)
 				{
 					InterruptPending = true;
